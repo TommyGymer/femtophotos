@@ -28,6 +28,13 @@ fn main() {
     let vertex_buffer = glium::VertexBuffer::new(&display, &shape).unwrap();
     let indices = glium::index::NoIndices(glium::index::PrimitiveType::TrianglesList);
 
+    // let frame_ar = available.y / available.x;
+    // let image_ar = image.y / image.x;
+    // if frame_ar > image_ar {
+    //     egui::Vec2::new(available.x, available.x * image_ar)
+    // } else {
+    //     egui::Vec2::new(available.y / image_ar, available.y)
+    // }
     
     let vertex_shader_src = r#"
     #version 410
@@ -36,10 +43,16 @@ fn main() {
     out vec2 v_tex_coords;
 
     uniform mat4 matrix;
+    uniform float i_aspr;
+    uniform float d_aspr;
 
     void main() {
         v_tex_coords = tex_coords;
-        gl_Position = matrix * vec4(position, 0.0, 1.0);
+        if (d_aspr > i_aspr) {
+            gl_Position = matrix * vec4(position.x / (d_aspr / i_aspr), position.y, 0.0, 1.0);
+        } else {
+            gl_Position = matrix * vec4(position.x, position.y * (d_aspr / i_aspr), 0.0, 1.0);
+        }
     }
     "#;
 
@@ -61,12 +74,14 @@ fn main() {
                             image::ImageFormat::Jpeg).unwrap().to_rgba8();
     let image_dimensions = image.dimensions();
     let image = glium::texture::RawImage2d::from_raw_rgba_reversed(&image.into_raw(), image_dimensions);
+    let image_aspr: f32 = image.width as f32 / image.height as f32;
 
     let texture = glium::texture::SrgbTexture2d::new(&display, image).unwrap();
 
     let program = glium::Program::from_source(&display, vertex_shader_src, fragment_shader_src, None).unwrap();
 
     event_loop.run(move |ev, _, control_flow| {
+        let display_aspr: f32 = display.get_framebuffer_dimensions().0 as f32 / display.get_framebuffer_dimensions().1 as f32;
         let uniforms = uniform! {
             matrix: [
                 [1.0, 0.0, 0.0, 0.0],
@@ -74,6 +89,8 @@ fn main() {
                 [0.0, 0.0, 1.0, 0.0],
                 [0.0, 0.0, 0.0, 1.0f32],
             ],
+            i_aspr: image_aspr,
+            d_aspr: display_aspr,
             tex: &texture,
         };
 
