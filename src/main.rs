@@ -73,6 +73,7 @@ fn main() {
 
     event_loop.run(move |ev, _, control_flow| {
         let display_aspr: f32 = display.get_framebuffer_dimensions().0 as f32 / display.get_framebuffer_dimensions().1 as f32;
+
         let uniforms = uniform! {
             matrix: [
                 [1.0, 0.0, 0.0, 0.0],
@@ -105,6 +106,25 @@ fn main() {
                 },
                 _ => return,
             },
+            glutin::event::Event::DeviceEvent { device_id, event } => match event {
+                glutin::event::DeviceEvent::MouseMotion { delta } => {
+                    println!("{:?}", delta);
+                    return;
+                },
+                glutin::event::DeviceEvent::MouseWheel { delta } => {
+                    println!("{:?}", delta);
+                    return;
+                },
+                glutin::event::DeviceEvent::Button { button, state } => {
+                    println!("{:?}: {:#?}", button, state);
+                    return;
+                },
+                glutin::event::DeviceEvent::Key(k) => {
+                    println!("{:?}", k);
+                    return;
+                },
+                _ => return,
+            }
             _ => (),
         }
     });
