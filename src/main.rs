@@ -27,14 +27,6 @@ fn main() {
 
     let vertex_buffer = glium::VertexBuffer::new(&display, &shape).unwrap();
     let indices = glium::index::NoIndices(glium::index::PrimitiveType::TrianglesList);
-
-    // let frame_ar = available.y / available.x;
-    // let image_ar = image.y / image.x;
-    // if frame_ar > image_ar {
-    //     egui::Vec2::new(available.x, available.x * image_ar)
-    // } else {
-    //     egui::Vec2::new(available.y / image_ar, available.y)
-    // }
     
     let vertex_shader_src = r#"
     #version 410
@@ -56,7 +48,6 @@ fn main() {
     }
     "#;
 
-    
     let fragment_shader_src = r#"
     #version 410
     in vec2 v_tex_coords;
