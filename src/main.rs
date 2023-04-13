@@ -2,10 +2,51 @@
 extern crate glium;
 extern crate image;
 
+use std::io::Cursor;
+
+use glium::glutin::event::{VirtualKeyCode, ElementState, ModifiersState};
+
 #[derive(Copy, Clone)]
 struct Vertex {
     position: [f32; 2],
     tex_coords: [f32; 2],
+}
+
+#[derive(Debug)]
+enum Rotation {
+    UP,
+    RIGHT,
+    DOWN,
+    LEFT,
+}
+
+impl Rotation {
+    fn clockwise(&self) -> Rotation {
+        match self {
+            Rotation::UP => Rotation::RIGHT,
+            Rotation::RIGHT => Rotation::DOWN,
+            Rotation::DOWN => Rotation::LEFT,
+            Rotation::LEFT => Rotation::UP,
+        }
+    }
+
+    fn anticlockwise(&self) -> Rotation {
+        match self {
+            Rotation::UP => Rotation::LEFT,
+            Rotation::RIGHT => Rotation::UP,
+            Rotation::DOWN => Rotation::RIGHT,
+            Rotation::LEFT => Rotation::DOWN,
+        }
+    }
+
+    fn to_u32(&self) -> u32 {
+        match self {
+            Rotation::UP => 0u32,
+            Rotation::RIGHT => 1u32,
+            Rotation::DOWN => 2u32,
+            Rotation::LEFT => 3u32,
+        }
+    }
 }
 
 implement_vertex!(Vertex, position, tex_coords);
@@ -34,16 +75,36 @@ fn main() {
     in vec2 tex_coords;
     out vec2 v_tex_coords;
 
-    uniform mat4 matrix;
-    uniform float i_aspr;
-    uniform float d_aspr;
+    uniform uint rot;
+    uniform double i_aspr;
+    uniform double d_aspr;
 
     void main() {
         v_tex_coords = tex_coords;
-        if (d_aspr > i_aspr) {
-            gl_Position = matrix * vec4(position.x / (d_aspr / i_aspr), position.y, 0.0, 1.0);
+        if (rot == 0) {
+            if (d_aspr > i_aspr) {
+                gl_Position = vec4(position.x / (d_aspr / i_aspr), position.y, 0.0, 1.0);
+            } else {
+                gl_Position = vec4(position.x, position.y * (d_aspr / i_aspr), 0.0, 1.0);
+            }
+        } else if (rot == 1) {
+            if (d_aspr < (1 / i_aspr)) {
+                gl_Position = vec4(position.y, position.x * (d_aspr * i_aspr), 0.0, 1.0);
+            } else {
+                gl_Position = vec4(position.y / (d_aspr * i_aspr), position.x, 0.0, 1.0);
+            }
+        } else if (rot == 2) {
+            if (d_aspr > i_aspr) {
+                gl_Position = vec4(position.x / (d_aspr / i_aspr), -position.y, 0.0, 1.0);
+            } else {
+                gl_Position = vec4(position.x, -position.y * (d_aspr / i_aspr), 0.0, 1.0);
+            }
         } else {
-            gl_Position = matrix * vec4(position.x, position.y * (d_aspr / i_aspr), 0.0, 1.0);
+            if (d_aspr < (1 / i_aspr)) {
+                gl_Position = vec4(-position.y, position.x * (d_aspr * i_aspr), 0.0, 1.0);
+            } else {
+                gl_Position = vec4(-position.y / (d_aspr * i_aspr), position.x, 0.0, 1.0);
+            }
         }
     }
     "#;
@@ -60,27 +121,31 @@ fn main() {
     }
     "#;
 
-    use std::io::Cursor;
     let image = image::load(Cursor::new(&include_bytes!("C:\\Users\\Tom\\Pictures\\20221212_135107.jpg")),
                             image::ImageFormat::Jpeg).unwrap().to_rgba8();
     let image_dimensions = image.dimensions();
     let image = glium::texture::RawImage2d::from_raw_rgba_reversed(&image.into_raw(), image_dimensions);
-    let image_aspr: f32 = image.width as f32 / image.height as f32;
+    let image_aspr: f64 = image.width as f64 / image.height as f64;
 
     let texture = glium::texture::SrgbTexture2d::new(&display, image).unwrap();
 
     let program = glium::Program::from_source(&display, vertex_shader_src, fragment_shader_src, None).unwrap();
 
+    let mut rotation = Rotation::UP;
+
     event_loop.run(move |ev, _, control_flow| {
-        let display_aspr: f32 = display.get_framebuffer_dimensions().0 as f32 / display.get_framebuffer_dimensions().1 as f32;
+        let display_aspr: f64 = display.get_framebuffer_dimensions().0 as f64 / display.get_framebuffer_dimensions().1 as f64;
+        
+        // if (display_aspr < image_aspr) {
+        //     println!("d_aspr < i_aspr");
+        // } else if (display_aspr > image_aspr) {
+        //     println!("d_aspr > i_aspr");
+        // } else {
+        //     println!("d_aspr = i_aspr");
+        // }
 
         let uniforms = uniform! {
-            matrix: [
-                [1.0, 0.0, 0.0, 0.0],
-                [0.0, 1.0, 0.0, 0.0],
-                [0.0, 0.0, 1.0, 0.0],
-                [0.0, 0.0, 0.0, 1.0f32],
-            ],
+            rot: rotation.to_u32(),
             i_aspr: image_aspr,
             d_aspr: display_aspr,
             tex: &texture,
@@ -104,6 +169,10 @@ fn main() {
                     *control_flow = glutin::event_loop::ControlFlow::Exit;
                     return;
                 },
+                glutin::event::WindowEvent::ModifiersChanged(state) => {
+                    println!("{:?}", state);
+                    return;
+                },
                 _ => return,
             },
             glutin::event::Event::DeviceEvent { device_id, event } => match event {
@@ -120,7 +189,21 @@ fn main() {
                     return;
                 },
                 glutin::event::DeviceEvent::Key(k) => {
-                    println!("{:?}", k);
+                    match k.virtual_keycode {
+                        Some(VirtualKeyCode::R) => {
+                                if (k.state == ElementState::Pressed) {
+                                    if (k.modifiers.contains(ModifiersState::SHIFT)) {
+                                        rotation = rotation.anticlockwise();
+                                    } else {
+                                        rotation = rotation.clockwise();
+                                    }
+                                    println!("rotated!");
+                                    println!("{:?}", rotation);
+                                }
+                                println!("{:?}", k);
+                            },
+                        _ => println!("{:?}", k),
+                    }
                     return;
                 },
                 _ => return,
