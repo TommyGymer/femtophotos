@@ -12,7 +12,7 @@ struct Vertex {
     tex_coords: [f32; 2],
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 enum Rotation {
     UP,
     RIGHT,
@@ -326,4 +326,27 @@ fn main() {
             _ => (),
         }
     });
+}
+
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_clockwise_rotations() {
+        assert_eq!(Rotation::UP.clockwise(), Rotation::RIGHT);
+        assert_eq!(Rotation::RIGHT.clockwise(), Rotation::DOWN);
+        assert_eq!(Rotation::DOWN.clockwise(), Rotation::LEFT);
+        assert_eq!(Rotation::LEFT.clockwise(), Rotation::UP);
+    }
+
+    #[test]
+    fn test_anticlockwise_rotations() {
+        assert_eq!(Rotation::UP.anticlockwise(), Rotation::LEFT);
+        assert_eq!(Rotation::RIGHT.anticlockwise(), Rotation::UP);
+        assert_eq!(Rotation::DOWN.anticlockwise(), Rotation::RIGHT);
+        assert_eq!(Rotation::LEFT.anticlockwise(), Rotation::DOWN);
+    }
 }
