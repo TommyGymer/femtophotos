@@ -1,8 +1,15 @@
 #[macro_use]
 extern crate glium;
 extern crate image;
+extern crate exif;
 
-use std::io::Cursor;
+mod rotation;
+use std::{path::Path, fs::{self, FileType}, io, os::windows::prelude::FileExt};
+
+mod image_loading;
+
+use exif::Tag;
+use rotation::Rotation;
 
 use glium::glutin::event::{ElementState, ModifiersState, VirtualKeyCode};
 
@@ -12,144 +19,111 @@ struct Vertex {
     tex_coords: [f32; 2],
 }
 
-#[derive(Debug, PartialEq)]
-enum Rotation {
-    UP,
-    RIGHT,
-    DOWN,
-    LEFT,
-}
-
-impl Rotation {
-    fn clockwise(&self) -> Rotation {
-        match self {
-            Rotation::UP => Rotation::RIGHT,
-            Rotation::RIGHT => Rotation::DOWN,
-            Rotation::DOWN => Rotation::LEFT,
-            Rotation::LEFT => Rotation::UP,
-        }
-    }
-
-    fn anticlockwise(&self) -> Rotation {
-        match self {
-            Rotation::UP => Rotation::LEFT,
-            Rotation::RIGHT => Rotation::UP,
-            Rotation::DOWN => Rotation::RIGHT,
-            Rotation::LEFT => Rotation::DOWN,
-        }
-    }
-
-    fn to_mat(&self, d_size: (u32, u32), i_size: (u32, u32)) -> [[f32; 2]; 2] {
-        match self {
-            Rotation::UP => {
-                if ((d_size.0 * i_size.1) as f32 / (d_size.1 * i_size.0) as f32) > 1.0 {
-                    [
-                        [
-                            (d_size.1 * i_size.0) as f32 / (d_size.0 * i_size.1) as f32,
-                            0.0,
-                        ],
-                        [0.0, 1.0],
-                    ]
-                } else {
-                    [
-                        [1.0, 0.0],
-                        [
-                            0.0,
-                            (d_size.0 * i_size.1) as f32 / (d_size.1 * i_size.0) as f32,
-                        ],
-                    ]
-                }
-            }
-            Rotation::RIGHT => {
-                if ((d_size.0 * i_size.0) as f32 / (d_size.1 * i_size.1) as f32) < 1.0 {
-                    [
-                        [
-                            0.0,
-                            (d_size.0 * i_size.0) as f32 / (d_size.1 * i_size.1) as f32,
-                        ],
-                        [1.0, 0.0],
-                    ]
-                } else {
-                    [
-                        [0.0, 1.0],
-                        [
-                            (d_size.1 * i_size.1) as f32 / (d_size.0 * i_size.0) as f32,
-                            0.0,
-                        ],
-                    ]
-                }
-            }
-            Rotation::DOWN => {
-                if ((d_size.0 * i_size.1) as f32 / (d_size.1 * i_size.0) as f32) > 1.0 {
-                    [
-                        [
-                            (d_size.1 * i_size.0) as f32 / (d_size.0 * i_size.1) as f32,
-                            0.0,
-                        ],
-                        [0.0, -1.0],
-                    ]
-                } else {
-                    [
-                        [1.0, 0.0],
-                        [
-                            0.0,
-                            -((d_size.0 * i_size.1) as f32 / (d_size.1 * i_size.0) as f32),
-                        ],
-                    ]
-                }
-            }
-            Rotation::LEFT => {
-                if ((d_size.0 * i_size.0) as f32 / (d_size.1 * i_size.1) as f32) < 1.0 {
-                    [
-                        [
-                            0.0,
-                            (d_size.0 * i_size.0) as f32 / (d_size.1 * i_size.1) as f32,
-                        ],
-                        [-1.0, 0.0],
-                    ]
-                } else {
-                    [
-                        [0.0, 1.0],
-                        [
-                            -((d_size.1 * i_size.1) as f32 / (d_size.0 * i_size.0) as f32),
-                            0.0,
-                        ],
-                    ]
-                }
-            }
-        }
-    }
-}
-
 implement_vertex!(Vertex, position, tex_coords);
 
 struct State {
     rotation: Rotation,
     directory: String,
     image_uri: String,
+    image_changed: bool,
     modifiers: Option<ModifiersState>,
     mouse_position: Option<(u32, u32)>,
     drag_origin: Option<(u32, u32)>,
+    running: bool,
 }
 
 impl State {
     fn default() -> Self {
         Self {
             rotation: Rotation::UP,
-            directory: String::from(""),
-            image_uri: String::from("C:\\Users\\Tom\\Pictures\\20221212_135107.jpg"),
+            directory: String::from("C:\\Users\\Tom\\Pictures\\"),
+            image_uri: String::from("C:\\Users\\Tom\\Pictures\\20230330_223017.jpg"),
+            image_changed: false,
             modifiers: None,
             mouse_position: None,
             drag_origin: None,
+            running: true,
         }
     }
 
-    fn next_img(&self) {
-        println!("Next");
+    fn get_dir_cont(&self) -> Result<Vec<fs::DirEntry>, io::Error> {
+        let files = fs::read_dir(Path::new(&self.directory))?;
+        files.collect::<Result<Vec<fs::DirEntry>, io::Error>>()
     }
 
-    fn prev_img(&self) {
+    fn next_img(&mut self) {
+        if self.image_changed || !self.running {return;}
+        println!("Next");
+        
+        match self.get_dir_cont() {
+            Ok(mut files) => {
+                files.sort_by(|a, b| a.path().partial_cmp(&b.path()).unwrap());
+                let mut i = files.into_iter();
+                println!("{:?}", i);
+                i.find(|f| f.path() == Path::new(&self.image_uri));
+                match i.find(|f| {
+                    match f.path().as_path().extension() {
+                        Some(ext) => match ext.to_str() {
+                            Some(ext) => ext == "jpg",
+                            None => false,
+                        },
+                        None => false,
+                    }
+                }) {
+                    Some(new_image) => {
+                        self.image_uri = new_image.path().as_path().to_str().unwrap().to_string();
+                        println!("Opening: {:?}", self.image_uri);
+
+                        let file = fs::File::open(Path::new(&self.image_uri)).unwrap();
+                        let mut buf_reader = io::BufReader::new(&file);
+                        let exif_reader = exif::Reader::new();
+                        let exif = exif_reader.read_from_container(&mut buf_reader).unwrap();
+
+                        match exif.fields().into_iter().find(|f| f.tag == Tag::Orientation) {
+                            Some(orient) => {
+                                println!("{:?}", orient.value);
+                                match orient.value.get_uint(0) {
+                                    Some(6u32) => self.rotation = Rotation::RIGHT,
+                                    _ => self.rotation = Rotation::UP,
+                                }
+                            },
+                            None => {},
+                        }
+
+                        self.image_changed = true;
+                    },
+                    None => return,
+                }
+            },
+            Err(err) => {
+                println!("{:?}", err);
+            }
+        }
+    }
+
+    fn prev_img(&mut self) {
+        if self.image_changed || !self.running {return;}
         println!("Prev");
+        
+        match self.get_dir_cont() {
+            Ok(mut files) => {
+                files.sort_by(|a, b| a.path().partial_cmp(&b.path()).unwrap());
+                let mut i = files.into_iter().rev();
+                println!("{:?}", i);
+                i.find(|f| f.path() == Path::new(&self.image_uri));
+                match i.next() {
+                    Some(new_image) => {
+                        self.image_uri = new_image.path().as_path().to_str().unwrap().to_string();
+                        println!("Opening: {:?}", self.image_uri);
+                        self.image_changed = true;
+                    },
+                    None => return,
+                }
+            },
+            Err(err) => {
+                println!("{:?}", err);
+            }
+        }
     }
 }
 
@@ -215,25 +189,23 @@ fn main() {
         glium::Program::from_source(&display, vertex_shader_src, fragment_shader_src, None)
             .unwrap();
 
-    let image = image::load(
-        Cursor::new(&include_bytes!(
-            "C:\\Users\\Tom\\Pictures\\20221212_135107.jpg"
-        )),
-        image::ImageFormat::Jpeg,
-    )
-    .unwrap()
-    .to_rgba8();
-    let image_dimensions = image.dimensions();
-    let image =
-        glium::texture::RawImage2d::from_raw_rgba_reversed(&image.into_raw(), image_dimensions);
-
-    let texture = glium::texture::SrgbTexture2d::new(&display, image).unwrap();
-
     let mut state = State::default();
 
+    let image = image_loading::load_image(Path::new(&state.image_uri)).unwrap();
+    let mut image_size = (image.width, image.height);
+    let mut texture = glium::texture::SrgbTexture2d::new(&display, image).unwrap();
+
     event_loop.run(move |ev, _, control_flow| {
+        if state.image_changed && state.running {
+            let image = image_loading::load_image(Path::new(&state.image_uri)).unwrap();
+            image_size = (image.width, image.height);
+            texture = glium::texture::SrgbTexture2d::new(&display, image).unwrap();
+
+            state.image_changed = false;
+        }
+
         let uniforms = uniform! {
-            p_rot: state.rotation.to_mat(display.get_framebuffer_dimensions(), image_dimensions),
+            p_rot: state.rotation.to_mat(display.get_framebuffer_dimensions(), image_size),
             tex: &texture,
         };
 
@@ -260,6 +232,8 @@ fn main() {
             glutin::event::Event::WindowEvent { event, .. } => match event {
                 glutin::event::WindowEvent::CloseRequested => {
                     *control_flow = glutin::event_loop::ControlFlow::Exit;
+                    state.running = false;
+                    return;
                 }
                 glutin::event::WindowEvent::ModifiersChanged(mod_state) => {
                     state.modifiers = Some(mod_state);
@@ -326,27 +300,4 @@ fn main() {
             _ => (),
         }
     });
-}
-
-
-
-#[cfg(test)]
-mod main_tests {
-    use super::*;
-
-    #[test]
-    fn test_clockwise_rotations() {
-        assert_eq!(Rotation::UP.clockwise(), Rotation::RIGHT);
-        assert_eq!(Rotation::RIGHT.clockwise(), Rotation::DOWN);
-        assert_eq!(Rotation::DOWN.clockwise(), Rotation::LEFT);
-        assert_eq!(Rotation::LEFT.clockwise(), Rotation::UP);
-    }
-
-    #[test]
-    fn test_anticlockwise_rotations() {
-        assert_eq!(Rotation::UP.anticlockwise(), Rotation::LEFT);
-        assert_eq!(Rotation::RIGHT.anticlockwise(), Rotation::UP);
-        assert_eq!(Rotation::DOWN.anticlockwise(), Rotation::RIGHT);
-        assert_eq!(Rotation::LEFT.anticlockwise(), Rotation::DOWN);
-    }
 }
