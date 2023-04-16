@@ -39,12 +39,60 @@ impl Rotation {
         }
     }
 
-    fn to_u32(&self) -> u32 {
+    fn to_mat(&self, d_size: (u32, u32), i_size: (u32, u32)) -> [[f32 ; 2] ; 2] {
         match self {
-            Rotation::UP => 0u32,
-            Rotation::RIGHT => 1u32,
-            Rotation::DOWN => 2u32,
-            Rotation::LEFT => 3u32,
+            Rotation::UP => {
+                if ((d_size.0 * i_size.1) as f32 / (d_size.1 * i_size.0) as f32) > 1.0 {
+                    [
+                        [(d_size.1 * i_size.0) as f32 / (d_size.0 * i_size.1) as f32, 0.0],
+                        [0.0, 1.0],
+                    ]
+                } else {
+                    [
+                        [1.0, 0.0],
+                        [0.0, (d_size.0 * i_size.1) as f32 / (d_size.1 * i_size.0) as f32],
+                    ]
+                }
+            },
+            Rotation::RIGHT => {
+                if ((d_size.0 * i_size.0) as f32 / (d_size.1 * i_size.1) as f32) < 1.0 {
+                    [
+                        [0.0, (d_size.0 * i_size.0) as f32 / (d_size.1 * i_size.1) as f32],
+                        [1.0, 0.0],
+                    ]
+                } else {
+                    [
+                        [0.0, 1.0],
+                        [(d_size.1 * i_size.1) as f32 / (d_size.0 * i_size.0) as f32, 0.0],
+                    ]
+                }
+            },
+            Rotation::DOWN => {
+                if ((d_size.0 * i_size.1) as f32 / (d_size.1 * i_size.0) as f32) > 1.0 {
+                    [
+                        [(d_size.1 * i_size.0) as f32 / (d_size.0 * i_size.1) as f32, 0.0],
+                        [0.0, -1.0],
+                    ]
+                } else {
+                    [
+                        [1.0, 0.0],
+                        [0.0, -((d_size.0 * i_size.1) as f32 / (d_size.1 * i_size.0) as f32)],
+                    ]
+                }
+            },
+            Rotation::LEFT => {
+                if ((d_size.0 * i_size.0) as f32 / (d_size.1 * i_size.1) as f32) < 1.0 {
+                    [
+                        [0.0, (d_size.0 * i_size.0) as f32 / (d_size.1 * i_size.1) as f32],
+                        [-1.0, 0.0],
+                    ]
+                } else {
+                    [
+                        [0.0, 1.0],
+                        [-((d_size.1 * i_size.1) as f32 / (d_size.0 * i_size.0) as f32), 0.0],
+                    ]
+                }
+            },
         }
     }
 }
@@ -55,7 +103,7 @@ fn main() {
     use glium::glutin;
     use glium::Surface;
 
-    let mut event_loop = glutin::event_loop::EventLoop::new();
+    let event_loop = glutin::event_loop::EventLoop::new();
     let wb = glutin::window::WindowBuilder::new();
     let cb = glutin::ContextBuilder::new();
     let display = glium::Display::new(wb, cb, &event_loop).unwrap();
@@ -75,37 +123,13 @@ fn main() {
     in vec2 tex_coords;
     out vec2 v_tex_coords;
 
-    uniform uint rot;
-    uniform double i_aspr;
-    uniform double d_aspr;
+    uniform mat2 p_rot;
 
     void main() {
         v_tex_coords = tex_coords;
-        if (rot == 0) {
-            if (d_aspr > i_aspr) {
-                gl_Position = vec4(position.x / (d_aspr / i_aspr), position.y, 0.0, 1.0);
-            } else {
-                gl_Position = vec4(position.x, position.y * (d_aspr / i_aspr), 0.0, 1.0);
-            }
-        } else if (rot == 1) {
-            if (d_aspr < (1 / i_aspr)) {
-                gl_Position = vec4(position.y, position.x * (d_aspr * i_aspr), 0.0, 1.0);
-            } else {
-                gl_Position = vec4(position.y / (d_aspr * i_aspr), position.x, 0.0, 1.0);
-            }
-        } else if (rot == 2) {
-            if (d_aspr > i_aspr) {
-                gl_Position = vec4(position.x / (d_aspr / i_aspr), -position.y, 0.0, 1.0);
-            } else {
-                gl_Position = vec4(position.x, -position.y * (d_aspr / i_aspr), 0.0, 1.0);
-            }
-        } else {
-            if (d_aspr < (1 / i_aspr)) {
-                gl_Position = vec4(-position.y, position.x * (d_aspr * i_aspr), 0.0, 1.0);
-            } else {
-                gl_Position = vec4(-position.y / (d_aspr * i_aspr), position.x, 0.0, 1.0);
-            }
-        }
+
+        vec2 tmp_pos = p_rot * position;
+        gl_Position = vec4(tmp_pos.x, tmp_pos.y, 0.0, 1.0);
     }
     "#;
 
@@ -125,7 +149,6 @@ fn main() {
                             image::ImageFormat::Jpeg).unwrap().to_rgba8();
     let image_dimensions = image.dimensions();
     let image = glium::texture::RawImage2d::from_raw_rgba_reversed(&image.into_raw(), image_dimensions);
-    let image_aspr: f64 = image.width as f64 / image.height as f64;
 
     let texture = glium::texture::SrgbTexture2d::new(&display, image).unwrap();
 
@@ -134,20 +157,8 @@ fn main() {
     let mut rotation = Rotation::UP;
 
     event_loop.run(move |ev, _, control_flow| {
-        let display_aspr: f64 = display.get_framebuffer_dimensions().0 as f64 / display.get_framebuffer_dimensions().1 as f64;
-        
-        // if (display_aspr < image_aspr) {
-        //     println!("d_aspr < i_aspr");
-        // } else if (display_aspr > image_aspr) {
-        //     println!("d_aspr > i_aspr");
-        // } else {
-        //     println!("d_aspr = i_aspr");
-        // }
-
         let uniforms = uniform! {
-            rot: rotation.to_u32(),
-            i_aspr: image_aspr,
-            d_aspr: display_aspr,
+            p_rot: rotation.to_mat(display.get_framebuffer_dimensions(), image_dimensions),
             tex: &texture,
         };
 
@@ -175,7 +186,7 @@ fn main() {
                 },
                 _ => return,
             },
-            glutin::event::Event::DeviceEvent { device_id, event } => match event {
+            glutin::event::Event::DeviceEvent { device_id: _, event } => match event {
                 glutin::event::DeviceEvent::MouseMotion { delta } => {
                     println!("{:?}", delta);
                     return;
@@ -191,8 +202,8 @@ fn main() {
                 glutin::event::DeviceEvent::Key(k) => {
                     match k.virtual_keycode {
                         Some(VirtualKeyCode::R) => {
-                                if (k.state == ElementState::Pressed) {
-                                    if (k.modifiers.contains(ModifiersState::SHIFT)) {
+                                if k.state == ElementState::Pressed {
+                                    if k.modifiers.contains(ModifiersState::SHIFT) {
                                         rotation = rotation.anticlockwise();
                                     } else {
                                         rotation = rotation.clockwise();
