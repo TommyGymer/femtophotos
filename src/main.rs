@@ -135,6 +135,7 @@ fn main() {
         //     std::time::Duration::from_nanos(16_666_667);
         // *control_flow = glutin::event_loop::ControlFlow::WaitUntil(next_frame_time);
 
+        // println!("{:?}", ev);
         match ev {
             glutin::event::Event::WindowEvent { event, .. } => match event {
                 glutin::event::WindowEvent::CloseRequested => {
@@ -143,7 +144,11 @@ fn main() {
                     return;
                 },
                 glutin::event::WindowEvent::ModifiersChanged(mod_state) => {
-                    state.modifiers = Some(mod_state);
+                    if mod_state.is_empty() {
+                        state.modifiers = None;
+                    } else {
+                        state.modifiers = Some(mod_state);
+                    }
                 },
                 glutin::event::WindowEvent::CursorMoved { position, .. } => {
                     state.mouse_position = Some((position.x as u32, position.y as u32));
@@ -189,20 +194,20 @@ fn main() {
                             } else {
                                 state.rotation = state.rotation.clockwise();
                             }
-                        }
+                        },
                         (Some(VirtualKeyCode::R), ElementState::Pressed, None) => {
                             state.rotation = state.rotation.clockwise();
-                        }
+                        },
                         (Some(VirtualKeyCode::Space), ElementState::Pressed, None) => {
                             state.next_img();
-                        }
+                        },
                         (Some(VirtualKeyCode::Right), ElementState::Pressed, None) => {
                             state.next_img();
-                        }
+                        },
                         (Some(VirtualKeyCode::Left), ElementState::Pressed, None) => {
                             state.prev_img();
-                        }
-                        _ => return,
+                        },
+                        _ => println!("returned {:?}", k),
                     }
                 }
                 _ => return,
