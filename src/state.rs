@@ -90,7 +90,7 @@ impl State {
 
     pub fn next_img(&mut self) {
         if self.image_changed || !self.running {return;}
-        println!("Next");
+        // println!("Next");
         
         match self.get_dir_cont() {
             Ok(mut files) => {
@@ -108,7 +108,7 @@ impl State {
 
     pub fn prev_img(&mut self) {
         if self.image_changed || !self.running {return;}
-        println!("Prev");
+        // println!("Prev");
         
         match self.get_dir_cont() {
             Ok(mut files) => {
