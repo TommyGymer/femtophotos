@@ -4,14 +4,12 @@ extern crate image;
 extern crate exif;
 
 mod rotation;
-use std::{path::Path, fs::{self, FileType}, io, os::windows::prelude::FileExt, time::Instant};
-
 mod image_loading;
+mod state;
+use state::State;
 
-use exif::Tag;
-use rotation::Rotation;
-
-use glium::glutin::event::{ElementState, ModifiersState, VirtualKeyCode};
+use std::{path::Path, time::Instant, io};
+use glium::{glutin::event::{ElementState, ModifiersState, VirtualKeyCode}, texture::SrgbTexture2d, Display};
 
 #[derive(Copy, Clone)]
 struct Vertex {
@@ -21,127 +19,14 @@ struct Vertex {
 
 implement_vertex!(Vertex, position, tex_coords);
 
-struct State {
-    rotation: Rotation,
-    directory: String,
-    image_uri: String,
-    image_changed: bool,
-    modifiers: Option<ModifiersState>,
-    mouse_position: Option<(u32, u32)>,
-    drag_origin: Option<(u32, u32)>,
-    running: bool,
-}
-
-impl State {
-    fn default() -> Self {
-        Self {
-            rotation: Rotation::UP,
-            directory: String::from("C:\\Users\\Tom\\Pictures\\"),
-            image_uri: String::from("C:\\Users\\Tom\\Pictures\\20230330_223017.jpg"),
-            image_changed: false,
-            modifiers: None,
-            mouse_position: None,
-            drag_origin: None,
-            running: true,
-        }
-    }
-
-    fn get_dir_cont(&self) -> Result<Vec<fs::DirEntry>, io::Error> {
-        let files = fs::read_dir(Path::new(&self.directory))?;
-        files.collect::<Result<Vec<fs::DirEntry>, io::Error>>()
-    }
-
-    fn next_img(&mut self) {
-        if self.image_changed || !self.running {return;}
-        println!("Next");
-        
-        match self.get_dir_cont() {
-            Ok(mut files) => {
-                files.sort_by(|a, b| a.path().partial_cmp(&b.path()).unwrap());
-                let mut i = files.into_iter();
-                // println!("{:?}", i);
-                i.find(|f| f.path() == Path::new(&self.image_uri));
-                match i.find(|f| {
-                    match f.path().as_path().extension() {
-                        Some(ext) => match ext.to_str() {
-                            Some(ext) => ext == "jpg",
-                            None => false,
-                        },
-                        None => false,
-                    }
-                }) {
-                    Some(new_image) => {
-                        self.image_uri = new_image.path().as_path().to_str().unwrap().to_string();
-                        println!("Opening: {:?}", self.image_uri);
-
-                        let file = fs::File::open(Path::new(&self.image_uri)).unwrap();
-                        let mut buf_reader = io::BufReader::new(&file);
-                        let exif_reader = exif::Reader::new();
-                        let exif = exif_reader.read_from_container(&mut buf_reader).unwrap();
-
-                        match exif.fields().into_iter().find(|f| f.tag == Tag::Orientation) {
-                            Some(orient) => {
-                                println!("{:?}", orient.value);
-                                match orient.value.get_uint(0) {
-                                    Some(6u32) => self.rotation = Rotation::RIGHT,
-                                    _ => self.rotation = Rotation::UP,
-                                }
-                            },
-                            None => {},
-                        }
-
-                        self.image_changed = true;
-                    },
-                    None => return,
-                }
-            },
-            Err(err) => {
-                println!("{:?}", err);
-            }
-        }
-    }
-
-    fn prev_img(&mut self) {
-        if self.image_changed || !self.running {return;}
-        println!("Prev");
-        
-        match self.get_dir_cont() {
-            Ok(mut files) => {
-                files.sort_by(|a, b| a.path().partial_cmp(&b.path()).unwrap());
-                let mut i = files.into_iter().rev();
-                // println!("{:?}", i);
-                i.find(|f| f.path() == Path::new(&self.image_uri));
-                match i.next() {
-                    Some(new_image) => {
-                        self.image_uri = new_image.path().as_path().to_str().unwrap().to_string();
-                        println!("Opening: {:?}", self.image_uri);
-
-                        let file = fs::File::open(Path::new(&self.image_uri)).unwrap();
-                        let mut buf_reader = io::BufReader::new(&file);
-                        let exif_reader = exif::Reader::new();
-                        let exif = exif_reader.read_from_container(&mut buf_reader).unwrap();
-
-                        match exif.fields().into_iter().find(|f| f.tag == Tag::Orientation) {
-                            Some(orient) => {
-                                println!("{:?}", orient.value);
-                                match orient.value.get_uint(0) {
-                                    Some(6u32) => self.rotation = Rotation::RIGHT,
-                                    _ => self.rotation = Rotation::UP,
-                                }
-                            },
-                            None => {},
-                        }
-
-                        self.image_changed = true;
-                    },
-                    None => return,
-                }
-            },
-            Err(err) => {
-                println!("{:?}", err);
-            }
-        }
-    }
+fn load_texture(display: &Display, state: &State) -> Result<(SrgbTexture2d, (u32, u32)), Box<dyn std::error::Error>> {
+    let start = Instant::now();
+    let image = image_loading::load_image(Path::new(&state.image_uri))?;
+    let image_size = (image.width, image.height);
+    println!("image loaded: {:?}", start.elapsed());
+    let texture = glium::texture::SrgbTexture2d::new(display, image)?;
+    println!("texture loaded: {:?}", start.elapsed());
+    Ok((texture, image_size))
 }
 
 fn main() {
@@ -207,23 +92,19 @@ fn main() {
             .unwrap();
 
     let mut state = State::default();
+    state.load_img();
 
-    let start = Instant::now();
-    let image = image_loading::load_image(Path::new(&state.image_uri)).unwrap();
-    println!("image loaded: {:?}", start.elapsed());
-    // start = Instant::now();
-    let mut image_size = (image.width, image.height);
-    let mut texture = glium::texture::SrgbTexture2d::new(&display, image).unwrap();
-    println!("texture loaded: {:?}", start.elapsed());
+    let (mut texture, mut image_size) = match load_texture(&display, &state) {
+        Ok(res) => res,
+        Err(err) => panic!("{:?}", err),
+    };
 
     event_loop.run(move |ev, _, control_flow| {
         if state.image_changed && state.running {
-            let start = Instant::now();
-            let image = image_loading::load_image(Path::new(&state.image_uri)).unwrap();
-            println!("image loaded: {:?}", start.elapsed());
-            image_size = (image.width, image.height);
-            texture = glium::texture::SrgbTexture2d::new(&display, image).unwrap();
-            println!("texture loaded: {:?}", start.elapsed());
+            (texture, image_size) = match load_texture(&display, &state) {
+                Ok(res) => res,
+                Err(err) => panic!("{:?}", err),
+            };
 
             state.image_changed = false;
         }
@@ -234,7 +115,7 @@ fn main() {
         };
 
         let mut target = display.draw();
-        target.clear_color(0.3, 0.3, 0.3, 1.0);
+        target.clear_color(0.2, 0.2, 0.2, 1.0);
 
         target
             .draw(
@@ -258,13 +139,16 @@ fn main() {
                     *control_flow = glutin::event_loop::ControlFlow::Exit;
                     state.running = false;
                     return;
-                }
+                },
                 glutin::event::WindowEvent::ModifiersChanged(mod_state) => {
                     state.modifiers = Some(mod_state);
-                }
+                },
                 glutin::event::WindowEvent::CursorMoved { position, .. } => {
                     state.mouse_position = Some((position.x as u32, position.y as u32));
-                }
+                },
+                glutin::event::WindowEvent::CursorLeft { .. } => {
+                    state.mouse_position = None;
+                },
                 _ => return,
             },
             glutin::event::Event::DeviceEvent {
