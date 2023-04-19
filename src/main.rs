@@ -102,7 +102,10 @@ fn main() {
     let mut state = State::default();
     state.load_img();
 
-    let (mut texture, mut image_size) = match load_texture(&display, &state) {
+    let mut texture: SrgbTexture2d;
+    let mut image_size: (u32, u32);
+
+    (texture, image_size) = match load_texture(&display, &state) {
         Ok(res) => res,
         Err(err) => panic!("{:?}", err),
     };
