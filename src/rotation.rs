@@ -108,7 +108,7 @@ impl Rotation {
 }
 
 #[cfg(test)]
-mod main_tests {
+mod rotation_tests {
     use super::*;
 
     #[test]
