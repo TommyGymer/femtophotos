@@ -35,10 +35,22 @@ impl State {
     }
 
     pub fn load_img(&mut self) {
-        let file = fs::File::open(Path::new(&self.image_uri)).unwrap();
+        let file = match fs::File::open(Path::new(&self.image_uri)) {
+            Ok(f) => f,
+            Err(err) => {
+                println!("{:?}", err);
+                return;
+            }
+        };
         let mut buf_reader = io::BufReader::new(&file);
         let exif_reader = exif::Reader::new();
-        let exif = exif_reader.read_from_container(&mut buf_reader).unwrap();
+        let exif = match exif_reader.read_from_container(&mut buf_reader) {
+            Ok(e) => e,
+            Err(err) => {
+                println!("{:?}", err);
+                return;
+            }
+        };
 
         match exif.fields().into_iter().find(|f| f.tag == Tag::Orientation) {
             Some(orient) => {
