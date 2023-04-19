@@ -2,6 +2,7 @@ use std::{path::{Path, PathBuf}, time::Instant, io::{ErrorKind, self, Cursor}, f
 
 use glium::{texture::RawImage2d};
 use image::{error::{ImageFormatHint, DecodingError}, Rgb, Rgba};
+use qoi::decode_to_vec;
 use turbojpeg::decompress_image;
 
 enum Image {
@@ -34,7 +35,7 @@ pub fn load_image(path: &Path) -> Result<RawImage2d<'static, u8>, Box<dyn std::e
 fn fast_load(path: &Path) -> Result<Image, Box<dyn std::error::Error>> {
     match path.extension() {
         Some(ext) => match ext.to_ascii_lowercase().to_str() {
-            Some("jpg") => Ok(Image::RGBA(decompress_image(&(fs::read(path)?))?)),
+            Some("jpg")|Some("jfif") => Ok(Image::RGBA(decompress_image(&(fs::read(path)?))?)),
             Some("png") => {
                 let file = &(fs::read(path).unwrap());
                 let cursor = Cursor::new(file);
@@ -49,7 +50,30 @@ fn fast_load(path: &Path) -> Result<Image, Box<dyn std::error::Error>> {
                     spng::ColorType::TruecolorAlpha => Ok(Image::RGBA(rgba_image_from_raw(info.width, info.height, out, path.to_path_buf())?)),
                     _ => panic!("not implemented grayscale png; this should probably return an error"),
                 }
-            }
+            },
+            Some("qoi") => {
+                let file = &(fs::read(path).unwrap());
+                let (header, decoded) = decode_to_vec(file)?;
+
+                match header.channels {
+                    qoi::Channels::Rgb => {
+                        Ok(Image::RGB(rgb_image_from_raw(
+                            header.width,
+                            header.height,
+                            decoded,
+                            path.to_path_buf(),
+                        )?))
+                    },
+                    qoi::Channels::Rgba => {
+                        Ok(Image::RGBA(rgba_image_from_raw(
+                            header.width,
+                            header.height,
+                            decoded,
+                            path.to_path_buf(),
+                        )?))
+                    },
+                }
+            },
             _ => panic!("not implemented"),
         },
         _ => {

@@ -207,7 +207,7 @@ fn main() {
                         (Some(VirtualKeyCode::Left), ElementState::Pressed, None) => {
                             state.prev_img();
                         },
-                        _ => println!("returned {:?}", k),
+                        _ => return, //println!("returned {:?}", k),
                     }
                 }
                 _ => return,

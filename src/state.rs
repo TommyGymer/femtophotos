@@ -19,8 +19,8 @@ impl State {
     pub fn default() -> Self {
         Self {
             rotation: Rotation::UP,
-            directory: String::from("C:\\Users\\Tom\\Pictures\\"),
-            image_uri: String::from("C:\\Users\\Tom\\Pictures\\20230330_223017.jpg"),
+            directory: String::from("C:\\Users\\Tom\\Pictures\\写真\\"),
+            image_uri: String::from("C:\\Users\\Tom\\Pictures\\写真\\312098.jpg"),
             image_changed: false,
             modifiers: None,
             mouse_position: None,
@@ -72,7 +72,7 @@ impl State {
         match i.find(|f| {
             match f.path().as_path().extension() {
                 Some(ext) => match ext.to_ascii_lowercase().to_str() {
-                    Some(ext) => vec!["jpg", "png"].contains(&ext),
+                    Some(_) => true,
                     None => false,
                 },
                 None => false,
