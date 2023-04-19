@@ -8,7 +8,7 @@ mod image_loading;
 mod state;
 use state::State;
 
-use std::{path::Path, time::Instant, io};
+use std::{path::Path, time::Instant};
 use glium::{glutin::event::{ElementState, ModifiersState, VirtualKeyCode}, texture::SrgbTexture2d, Display};
 
 #[derive(Copy, Clone)]
