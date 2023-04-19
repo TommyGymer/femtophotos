@@ -10,7 +10,7 @@ use rfd::FileDialog;
 use state::State;
 
 use std::{path::Path, time::Instant, ffi::OsString, env};
-use glium::{glutin::{event::{ElementState, ModifiersState, VirtualKeyCode}, window::Icon}, texture::SrgbTexture2d, Display};
+use glium::{glutin::{event::{ElementState, ModifiersState, VirtualKeyCode}, window::Icon}, texture::SrgbTexture2d, Display, DrawParameters, Blend};
 
 #[derive(Copy, Clone)]
 struct Vertex {
@@ -125,7 +125,7 @@ fn main() {
         };
 
         let mut target = display.draw();
-        target.clear_color(0.2, 0.2, 0.2, 0.2);
+        target.clear_color(0.2, 0.2, 0.2, 1.0);
 
         target
             .draw(
@@ -133,7 +133,7 @@ fn main() {
                 &indices,
                 &program,
                 &uniforms,
-                &Default::default(),
+                &DrawParameters {blend: Blend::alpha_blending(), .. Default::default()},
             )
             .unwrap();
 
