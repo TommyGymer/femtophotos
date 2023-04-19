@@ -34,7 +34,7 @@ fn main() {
     use glium::Surface;
 
     let event_loop = glutin::event_loop::EventLoop::new();
-    let wb = glutin::window::WindowBuilder::new();
+    let wb = glutin::window::WindowBuilder::new().with_title("FemtoPhotos: ");
     let cb = glutin::ContextBuilder::new();
     let display = glium::Display::new(wb, cb, &event_loop).unwrap();
 
@@ -105,6 +105,8 @@ fn main() {
                 Ok(res) => res,
                 Err(err) => panic!("{:?}", err),
             };
+
+            display.gl_window().window().set_title(&format!("FemtoPhotos: {}", Path::new(&state.image_uri).file_name().unwrap().to_str().unwrap()));
 
             state.image_changed = false;
         }

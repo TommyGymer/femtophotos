@@ -71,8 +71,8 @@ impl State {
     fn open_img<I: Iterator<Item = DirEntry>>(&mut self, mut i: I) {
         match i.find(|f| {
             match f.path().as_path().extension() {
-                Some(ext) => match ext.to_str() {
-                    Some(ext) => ext == "jpg",
+                Some(ext) => match ext.to_ascii_lowercase().to_str() {
+                    Some(ext) => vec!["jpg", "png"].contains(&ext),
                     None => false,
                 },
                 None => false,
