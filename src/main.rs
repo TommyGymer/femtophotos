@@ -4,7 +4,7 @@ extern crate image;
 extern crate exif;
 
 mod rotation;
-use std::{path::Path, fs::{self, FileType}, io, os::windows::prelude::FileExt};
+use std::{path::Path, fs::{self, FileType}, io, os::windows::prelude::FileExt, time::Instant};
 
 mod image_loading;
 
@@ -59,7 +59,7 @@ impl State {
             Ok(mut files) => {
                 files.sort_by(|a, b| a.path().partial_cmp(&b.path()).unwrap());
                 let mut i = files.into_iter();
-                println!("{:?}", i);
+                // println!("{:?}", i);
                 i.find(|f| f.path() == Path::new(&self.image_uri));
                 match i.find(|f| {
                     match f.path().as_path().extension() {
@@ -109,12 +109,29 @@ impl State {
             Ok(mut files) => {
                 files.sort_by(|a, b| a.path().partial_cmp(&b.path()).unwrap());
                 let mut i = files.into_iter().rev();
-                println!("{:?}", i);
+                // println!("{:?}", i);
                 i.find(|f| f.path() == Path::new(&self.image_uri));
                 match i.next() {
                     Some(new_image) => {
                         self.image_uri = new_image.path().as_path().to_str().unwrap().to_string();
                         println!("Opening: {:?}", self.image_uri);
+
+                        let file = fs::File::open(Path::new(&self.image_uri)).unwrap();
+                        let mut buf_reader = io::BufReader::new(&file);
+                        let exif_reader = exif::Reader::new();
+                        let exif = exif_reader.read_from_container(&mut buf_reader).unwrap();
+
+                        match exif.fields().into_iter().find(|f| f.tag == Tag::Orientation) {
+                            Some(orient) => {
+                                println!("{:?}", orient.value);
+                                match orient.value.get_uint(0) {
+                                    Some(6u32) => self.rotation = Rotation::RIGHT,
+                                    _ => self.rotation = Rotation::UP,
+                                }
+                            },
+                            None => {},
+                        }
+
                         self.image_changed = true;
                     },
                     None => return,
@@ -191,15 +208,22 @@ fn main() {
 
     let mut state = State::default();
 
+    let start = Instant::now();
     let image = image_loading::load_image(Path::new(&state.image_uri)).unwrap();
+    println!("image loaded: {:?}", start.elapsed());
+    // start = Instant::now();
     let mut image_size = (image.width, image.height);
     let mut texture = glium::texture::SrgbTexture2d::new(&display, image).unwrap();
+    println!("texture loaded: {:?}", start.elapsed());
 
     event_loop.run(move |ev, _, control_flow| {
         if state.image_changed && state.running {
+            let start = Instant::now();
             let image = image_loading::load_image(Path::new(&state.image_uri)).unwrap();
+            println!("image loaded: {:?}", start.elapsed());
             image_size = (image.width, image.height);
             texture = glium::texture::SrgbTexture2d::new(&display, image).unwrap();
+            println!("texture loaded: {:?}", start.elapsed());
 
             state.image_changed = false;
         }

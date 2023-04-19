@@ -34,14 +34,14 @@ impl Rotation {
                             (d_size.1 * i_size.0) as f32 / (d_size.0 * i_size.1) as f32,
                             0.0,
                         ],
-                        [0.0, 1.0],
+                        [0.0, -1.0],
                     ]
                 } else {
                     [
                         [1.0, 0.0],
                         [
                             0.0,
-                            (d_size.0 * i_size.1) as f32 / (d_size.1 * i_size.0) as f32,
+                            -((d_size.0 * i_size.1) as f32 / (d_size.1 * i_size.0) as f32),
                         ],
                     ]
                 }
@@ -53,13 +53,13 @@ impl Rotation {
                             0.0,
                             -((d_size.0 * i_size.0) as f32 / (d_size.1 * i_size.1) as f32),
                         ],
-                        [1.0, 0.0],
+                        [-1.0, 0.0],
                     ]
                 } else {
                     [
                         [0.0, -1.0],
                         [
-                            (d_size.1 * i_size.1) as f32 / (d_size.0 * i_size.0) as f32,
+                            -((d_size.1 * i_size.1) as f32 / (d_size.0 * i_size.0) as f32),
                             0.0,
                         ],
                     ]
@@ -72,14 +72,14 @@ impl Rotation {
                             -((d_size.1 * i_size.0) as f32 / (d_size.0 * i_size.1) as f32),
                             0.0,
                         ],
-                        [0.0, -1.0],
+                        [0.0, 1.0],
                     ]
                 } else {
                     [
                         [-1.0, 0.0],
                         [
                             0.0,
-                            -((d_size.0 * i_size.1) as f32 / (d_size.1 * i_size.0) as f32),
+                            ((d_size.0 * i_size.1) as f32 / (d_size.1 * i_size.0) as f32),
                         ],
                     ]
                 }
@@ -91,13 +91,13 @@ impl Rotation {
                             0.0,
                             ((d_size.0 * i_size.0) as f32 / (d_size.1 * i_size.1) as f32),
                         ],
-                        [-1.0, 0.0],
+                        [1.0, 0.0],
                     ]
                 } else {
                     [
                         [0.0, 1.0],
                         [
-                            -((d_size.1 * i_size.1) as f32 / (d_size.0 * i_size.0) as f32),
+                            ((d_size.1 * i_size.1) as f32 / (d_size.0 * i_size.0) as f32),
                             0.0,
                         ],
                     ]
