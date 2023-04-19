@@ -16,7 +16,7 @@ pub fn load_image(path: &Path) -> Result<RawImage2d<'static, u8>, Box<dyn std::e
     let image: Image = match fast_load(path) {
         Ok(img) => img,
         Err(err) => {
-            println!("fast load failed: {:#?}", err);
+            println!("fast load failed: {:?}", err);
             match slow_load_rgb(path) {
                 Ok(img) => img,
                 Err(err) => {
@@ -74,7 +74,7 @@ fn fast_load(path: &Path) -> Result<Image, Box<dyn std::error::Error>> {
                     },
                 }
             },
-            _ => panic!("not implemented"),
+            _ => return Err(Box::new(io::Error::new(ErrorKind::Other, "unsupported extension"))),
         },
         _ => {
             println!("no extension");
@@ -86,21 +86,23 @@ fn fast_load(path: &Path) -> Result<Image, Box<dyn std::error::Error>> {
 fn slow_load_rgb(path: &Path) -> Result<Image, Box<dyn std::error::Error>> {
     let reader = image::io::Reader::open(path)?.with_guessed_format()?;
     println!("detected format: {:?}", reader.format());
-    Ok(Image::RGB(reader
-        .decode()?
-        .as_rgb8()
-        .unwrap()
-        .to_owned()))
+    let decoded = reader.decode()?;
+    let data = match decoded.as_rgb8() {
+        Some(data) => data,
+        None => return Err(Box::new(io::Error::new(ErrorKind::Other, "unsupported extension"))),
+    };
+    Ok(Image::RGB(data.to_owned()))
 }
 
 fn slow_load_rgba(path: &Path) -> Result<Image, Box<dyn std::error::Error>> {
     let reader = image::io::Reader::open(path)?.with_guessed_format()?;
     println!("detected format: {:?}", reader.format());
-    Ok(Image::RGBA(reader
-        .decode()?
-        .as_rgba8()
-        .unwrap()
-        .to_owned()))
+    let decoded = reader.decode()?;
+    let data = match decoded.as_rgba8() {
+        Some(data) => data,
+        None => return Err(Box::new(io::Error::new(ErrorKind::Other, "unsupported extension"))),
+    };
+    Ok(Image::RGBA(data.to_owned()))
 }
 
 fn rgb_image_from_raw(
@@ -144,4 +146,17 @@ fn texture_from_image(img: Image) -> Result<RawImage2d<'static, u8>, Box<dyn std
             Ok(glium::texture::RawImage2d::from_raw_rgba(img.into_raw(), image_dimensions))
         },
     }
+}
+
+pub fn icon() -> Result<(Vec<u8>, (u32, u32)), Box<dyn std::error::Error>> {
+    let path = Path::new("./img/icon.ico");
+    let reader = image::io::Reader::open(path)?.with_guessed_format()?;
+    println!("detected format: {:?}", reader.format());
+    let decoded = reader.decode()?;
+    let data = match decoded.as_rgba8() {
+        Some(data) => data,
+        None => return Err(Box::new(io::Error::new(ErrorKind::Other, "unsupported extension"))),
+    };
+    
+    Ok((data.as_raw().to_vec(), data.dimensions()))
 }

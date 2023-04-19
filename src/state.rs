@@ -6,7 +6,7 @@ use crate::rotation::Rotation;
 
 pub struct State {
     pub rotation: Rotation,
-    directory: String,
+    pub directory: String,
     pub image_uri: String,
     pub image_changed: bool,
     pub modifiers: Option<ModifiersState>,

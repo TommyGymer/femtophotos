@@ -6,10 +6,11 @@ extern crate exif;
 mod rotation;
 mod image_loading;
 mod state;
+use rfd::FileDialog;
 use state::State;
 
-use std::{path::Path, time::Instant};
-use glium::{glutin::event::{ElementState, ModifiersState, VirtualKeyCode}, texture::SrgbTexture2d, Display};
+use std::{path::Path, time::Instant, ffi::OsString, env};
+use glium::{glutin::{event::{ElementState, ModifiersState, VirtualKeyCode}, window::Icon}, texture::SrgbTexture2d, Display};
 
 #[derive(Copy, Clone)]
 struct Vertex {
@@ -30,11 +31,18 @@ fn load_texture(display: &Display, state: &State) -> Result<(SrgbTexture2d, (u32
 }
 
 fn main() {
+    let args: Vec<OsString> = env::args_os().collect();
+    dbg!(&args);
+
     use glium::glutin;
     use glium::Surface;
 
     let event_loop = glutin::event_loop::EventLoop::new();
-    let wb = glutin::window::WindowBuilder::new().with_title("FemtoPhotos: ");
+    let icon = match image_loading::icon() {
+        Ok((data, (width, height))) => Some(Icon::from_rgba(data, width, height).unwrap()),
+        Err(_) => None,
+    };
+    let wb = glutin::window::WindowBuilder::new().with_title("FemtoPhotos: ").with_transparent(true).with_window_icon(icon);
     let cb = glutin::ContextBuilder::new();
     let display = glium::Display::new(wb, cb, &event_loop).unwrap();
 
@@ -117,7 +125,7 @@ fn main() {
         };
 
         let mut target = display.draw();
-        target.clear_color(0.2, 0.2, 0.2, 1.0);
+        target.clear_color(0.2, 0.2, 0.2, 0.2);
 
         target
             .draw(
@@ -206,6 +214,19 @@ fn main() {
                         },
                         (Some(VirtualKeyCode::Left), ElementState::Pressed, None) => {
                             state.prev_img();
+                        },
+                        (Some(VirtualKeyCode::S,), ElementState::Released, None) => {
+                            println!("Saving");
+
+                            let file = FileDialog::new()
+                                    .set_directory(Path::new(&state.directory))
+                                    .set_file_name(&state.image_uri)
+                                    .add_filter("JPG", &["jpg", "JPG", "jpeg", "JPEG"])
+                                    .add_filter("PNG", &["png", "PNG"])
+                                    .add_filter("QOI", &["qoi", "QOI"])
+                                    .save_file();
+
+                            println!("{:?}", file);
                         },
                         _ => return, //println!("returned {:?}", k),
                     }
