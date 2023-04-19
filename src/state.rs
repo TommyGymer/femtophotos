@@ -44,24 +44,26 @@ impl State {
         };
         let mut buf_reader = io::BufReader::new(&file);
         let exif_reader = exif::Reader::new();
-        let exif = match exif_reader.read_from_container(&mut buf_reader) {
-            Ok(e) => e,
-            Err(err) => {
-                println!("{:?}", err);
-                return;
-            }
-        };
-
-        match exif.fields().into_iter().find(|f| f.tag == Tag::Orientation) {
-            Some(orient) => {
-                println!("{:?}", orient.value);
-                match orient.value.get_uint(0) {
-                    Some(6u32) => self.rotation = Rotation::RIGHT,
-                    _ => self.rotation = Rotation::UP,
+        match exif_reader.read_from_container(&mut buf_reader) {
+            Ok(exif) => {
+                match exif.fields().into_iter().find(|f| f.tag == Tag::Orientation) {
+                    Some(orient) => {
+                        // println!("{:?}", orient.value);
+                        match orient.value.get_uint(0) {
+                            Some(1u32) => self.rotation = Rotation::UP,
+                            Some(6u32) => self.rotation = Rotation::RIGHT,
+                            Some(3u32) => self.rotation = Rotation::DOWN,
+                            Some(8u32) => self.rotation = Rotation::LEFT,
+                            _ => self.rotation = Rotation::UP,
+                        }
+                    },
+                    None => {},
                 }
             },
-            None => {},
-        }
+            Err(err) => {
+                println!("exif: {:?}", err);
+            }
+        };
 
         self.image_changed = true;
     }
