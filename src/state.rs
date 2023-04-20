@@ -19,8 +19,8 @@ impl State {
     pub fn default() -> Self {
         Self {
             rotation: Rotation::UP,
-            directory: String::from(".\\img\\"),
-            image_uri: String::from(".\\img\\no_image.png"),
+            directory: String::from("./img/"),
+            image_uri: String::from("./img/no_image.png"),
             image_changed: false,
             modifiers: None,
             mouse_position: None,
