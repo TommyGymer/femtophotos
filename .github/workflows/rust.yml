@@ -1,17 +1,19 @@
-name: build
+name: rust_build
 
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - main
   pull_request:
-    branches: [ "main" ]
+    branches:
+      - main
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
   build:
-
+    name: build
     runs-on: [ubuntu-latest, windows-latest]
 
     steps:
