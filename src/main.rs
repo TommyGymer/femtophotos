@@ -105,6 +105,10 @@ fn main() {
             .unwrap();
 
     let mut state = State::default();
+    if args.len() > 1 {
+        state.image_uri = args.get(1).unwrap().to_str().unwrap().to_string();
+        state.directory = Path::new(&state.image_uri).parent().unwrap().to_str().unwrap().to_string();
+    }
     state.load_img();
 
     let mut texture: SrgbTexture2d;

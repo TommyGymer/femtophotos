@@ -61,6 +61,7 @@ impl State {
                 }
             },
             Err(err) => {
+                self.rotation = Rotation::UP;
                 println!("exif: {:?}", err);
             }
         };
