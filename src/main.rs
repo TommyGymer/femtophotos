@@ -5,12 +5,15 @@ extern crate exif;
 
 mod rotation;
 mod image_loading;
+mod image_saving;
 mod state;
 use rfd::FileDialog;
 use state::State;
 
-use std::{path::Path, time::Instant, ffi::OsString, env};
+use std::{path::Path, time::Instant, ffi::OsString, env, thread};
 use glium::{glutin::{event::{ElementState, ModifiersState, VirtualKeyCode}, window::Icon}, texture::SrgbTexture2d, Display, DrawParameters, Blend};
+
+use crate::image_saving::save_image;
 
 #[derive(Copy, Clone)]
 struct Vertex {
@@ -219,17 +222,24 @@ fn main() {
                             state.prev_img();
                         },
                         (Some(VirtualKeyCode::S,), ElementState::Released, None) => {
-                            println!("Saving");
-
                             let file = FileDialog::new()
                                     .set_directory(Path::new(&state.directory))
-                                    .set_file_name(&state.image_uri)
+                                    .set_file_name(Path::new(&state.image_uri).file_name().unwrap().to_str().unwrap())
                                     .add_filter("JPG", &["jpg", "JPG", "jpeg", "JPEG"])
                                     .add_filter("PNG", &["png", "PNG"])
                                     .add_filter("QOI", &["qoi", "QOI"])
                                     .save_file();
 
-                            println!("{:?}", file);
+                            println!("Saving to {:?}", file);
+
+                            let buf: image_saving::RGBAImageData = texture.read_to_pixel_buffer().read_as_texture_2d().unwrap();
+                            let size = (texture.width(), texture.height());
+
+                            thread::spawn(move || {
+                                let data: Vec<u8> = flatten(buf.data);
+
+                                save_image(data, size.0, size.1, file.unwrap().as_path());
+                            });
                         },
                         _ => return, //println!("returned {:?}", k),
                     }
@@ -239,4 +249,15 @@ fn main() {
             _ => (),
         }
     });
+}
+
+#[no_mangle]
+#[inline(never)]
+fn flatten(data: Vec<(u8, u8, u8, u8)>) -> Vec<u8> {
+    let size = data.capacity();
+    let mut result = data;
+    unsafe {
+        result.set_len(size * 4);
+        std::mem::transmute(result)
+    }
 }

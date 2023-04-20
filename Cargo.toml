@@ -11,8 +11,10 @@ image = "*"
 spng = "^0.1.0"
 turbojpeg = {version = "^0.5", features = ["image"]}
 qoi = "^0.4.1"
+png = "^0.17.8"
 kamadak-exif = "^0.5.5"
 rfd = "^0.11.3"
+rayon = "^1.7.0"
 
 [dev-dependencies]
 rusty-hook = "^0.11.2"
