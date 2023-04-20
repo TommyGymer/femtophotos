@@ -1,21 +1,13 @@
-name: rust_build
-
+name: Rust FP
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
   pull_request:
-    branches:
-      - main
-
-env:
-  CARGO_TERM_COLOR: always
-
+    branches: [ main ]
 jobs:
   build:
     name: build
     runs-on: [ubuntu-latest, windows-latest]
-
     steps:
     - uses: actions/checkout@v3
     - name: Build
