@@ -1,4 +1,4 @@
-![example workflow](https://github.com/TommyGymer/femtophotos/actions/workflows/rust.yml/badge.svg)
+[![Rust FP](https://github.com/TommyGymer/femtophotos/actions/workflows/rust.yml/badge.svg)](https://github.com/TommyGymer/femtophotos/actions/workflows/rust.yml)
 
 # FemtoPhotos
 
