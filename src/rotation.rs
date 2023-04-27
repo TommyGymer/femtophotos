@@ -26,83 +26,22 @@ impl Rotation {
     }
 
     pub fn to_mat(&self, d_size: (u32, u32), i_size: (u32, u32)) -> [[f32; 2]; 2] {
+        let (mut t, mut s) = match self {
+            Rotation::UP | Rotation::DOWN => (
+                (d_size.1 * i_size.0) as f32 / (d_size.0 * i_size.1) as f32,
+                (d_size.0 * i_size.1) as f32 / (d_size.1 * i_size.0) as f32
+            ),
+            Rotation::RIGHT | Rotation::LEFT => (
+                (d_size.0 * i_size.0) as f32 / (d_size.1 * i_size.1) as f32,
+                (d_size.1 * i_size.1) as f32 / (d_size.0 * i_size.0) as f32
+            ),
+        };
+        if t < 1.0 { s = 1.0; } else { t = 1.0; }
         match self {
-            Rotation::UP => {
-                if ((d_size.0 * i_size.1) as f32 / (d_size.1 * i_size.0) as f32) > 1.0 {
-                    [
-                        [
-                            (d_size.1 * i_size.0) as f32 / (d_size.0 * i_size.1) as f32,
-                            0.0,
-                        ],
-                        [0.0, -1.0],
-                    ]
-                } else {
-                    [
-                        [1.0, 0.0],
-                        [
-                            0.0,
-                            -((d_size.0 * i_size.1) as f32 / (d_size.1 * i_size.0) as f32),
-                        ],
-                    ]
-                }
-            }
-            Rotation::RIGHT => {
-                if ((d_size.0 * i_size.0) as f32 / (d_size.1 * i_size.1) as f32) < 1.0 {
-                    [
-                        [
-                            0.0,
-                            -((d_size.0 * i_size.0) as f32 / (d_size.1 * i_size.1) as f32),
-                        ],
-                        [-1.0, 0.0],
-                    ]
-                } else {
-                    [
-                        [0.0, -1.0],
-                        [
-                            -((d_size.1 * i_size.1) as f32 / (d_size.0 * i_size.0) as f32),
-                            0.0,
-                        ],
-                    ]
-                }
-            }
-            Rotation::DOWN => {
-                if ((d_size.0 * i_size.1) as f32 / (d_size.1 * i_size.0) as f32) > 1.0 {
-                    [
-                        [
-                            -((d_size.1 * i_size.0) as f32 / (d_size.0 * i_size.1) as f32),
-                            0.0,
-                        ],
-                        [0.0, 1.0],
-                    ]
-                } else {
-                    [
-                        [-1.0, 0.0],
-                        [
-                            0.0,
-                            ((d_size.0 * i_size.1) as f32 / (d_size.1 * i_size.0) as f32),
-                        ],
-                    ]
-                }
-            }
-            Rotation::LEFT => {
-                if ((d_size.0 * i_size.0) as f32 / (d_size.1 * i_size.1) as f32) < 1.0 {
-                    [
-                        [
-                            0.0,
-                            ((d_size.0 * i_size.0) as f32 / (d_size.1 * i_size.1) as f32),
-                        ],
-                        [1.0, 0.0],
-                    ]
-                } else {
-                    [
-                        [0.0, 1.0],
-                        [
-                            ((d_size.1 * i_size.1) as f32 / (d_size.0 * i_size.0) as f32),
-                            0.0,
-                        ],
-                    ]
-                }
-            }
+            Rotation::UP => [[t, 0.0], [0.0, -s]],
+            Rotation::RIGHT => [[0.0, -t], [-s, 0.0]],
+            Rotation::DOWN => [[-t, 0.0], [0.0, s]],
+            Rotation::LEFT => [[0.0, t], [s, 0.0]],
         }
     }
 }
