@@ -23,12 +23,12 @@ pub fn load_image(path: &Path) -> Result<RawImage2d<'static, u8>, Box<dyn std::e
 
     let image: Image = match fast_load(path) {
         Ok(img) => img,
-        Err(err) => {
-            println!("fast load failed: {:?}", err);
+        Err(_) => {
+            // println!("fast load failed: {:?}", err);
             match slow_load_rgb(path) {
                 Ok(img) => img,
-                Err(err) => {
-                    println!("rgb slow load failed: {:?}", err);
+                Err(_) => {
+                    // println!("rgb slow load failed: {:?}", err);
                     slow_load_rgba(path)?
                 }
             }

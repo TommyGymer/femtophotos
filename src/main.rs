@@ -20,7 +20,7 @@ use glium::{
     texture::SrgbTexture2d,
     Blend, Display, DrawParameters,
 };
-use std::{env, ffi::OsString, path::Path, thread, time::Instant};
+use std::{env, ffi::OsString, path::Path, thread};
 
 use crate::image_saving::save_image;
 
@@ -36,12 +36,12 @@ fn load_texture(
     display: &Display,
     state: &State,
 ) -> Result<(SrgbTexture2d, (u32, u32)), Box<dyn std::error::Error>> {
-    let start = Instant::now();
+    // let start = Instant::now();
     let image = image_loading::load_image(Path::new(&state.image_uri))?;
     let image_size = (image.width, image.height);
-    println!("image loaded: {:?}", start.elapsed());
+    // println!("image loaded: {:?}", start.elapsed());
     let texture = glium::texture::SrgbTexture2d::new(display, image)?;
-    println!("texture loaded: {:?}", start.elapsed());
+    // println!("texture loaded: {:?}", start.elapsed());
     Ok((texture, image_size))
 }
 
@@ -136,6 +136,17 @@ fn main() {
         Ok(res) => res,
         Err(err) => panic!("{:?}", err),
     };
+
+    display.gl_window().window().set_title(&format!(
+        "FemtoPhotos: {}",
+        Path::new(&state.image_uri)
+            .file_name()
+            .unwrap()
+            .to_str()
+            .unwrap()
+    ));
+
+    state.image_changed = false;
 
     event_loop.run(move |ev, _, control_flow| {
         if state.image_changed && state.running {
