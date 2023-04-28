@@ -73,7 +73,7 @@ impl State {
         match i.find(|f| {
             match f.path().as_path().extension() {
                 Some(ext) => match ext.to_ascii_lowercase().to_str() {
-                    Some(_) => true,
+                    Some(extension) => ["png", "jpg", "qoi", "ico", "jfif"].contains(&extension),
                     None => false,
                 },
                 None => false,
