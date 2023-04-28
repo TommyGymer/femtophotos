@@ -176,7 +176,30 @@ fn main() {
                 glutin::event::WindowEvent::CursorLeft { .. } => {
                     state.mouse_position = None;
                 },
+                glutin::event::WindowEvent::Touch (touch) => {
+                    match touch.phase {
+                        glutin::event::TouchPhase::Started => state.drag_origin = Some((touch.location.x as u32, touch.location.y as u32)),
+                        glutin::event::TouchPhase::Ended => {
+                            match (state.drag_origin, state.mouse_position) {
+                                (Some(start), Some(end)) => {
+                                    if start.0 < end.0 {
+                                        state.prev_img();
+                                    } else {
+                                        state.next_img();
+                                    }
+                                }
+                                _ => return,
+                            }
+                        },
+                        glutin::event::TouchPhase::Moved => state.mouse_position = Some((touch.location.x as u32, touch.location.y as u32)),
+                        _ => {
+                            state.drag_origin = None;
+                            state.mouse_position = None;
+                        },
+                    }
+                },
                 _ => return,
+                //_ => println!("{:?}", event),
             },
             glutin::event::Event::DeviceEvent {
                 device_id: _,
@@ -205,6 +228,7 @@ fn main() {
                         }
                     }
                     _ => return,
+                    //_ => println!("{:?}", event),
                 },
                 glutin::event::DeviceEvent::Key(k) => {
                     match (k.virtual_keycode, k.state, state.modifiers) {
