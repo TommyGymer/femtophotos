@@ -1,3 +1,5 @@
+all: b r t
+
 b:
 	- cargo build
 

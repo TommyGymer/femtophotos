@@ -10,6 +10,7 @@ use image::{
     error::{DecodingError, ImageFormatHint},
     Rgb, Rgba,
 };
+use log::{trace, warn, info};
 use qoi::decode_to_vec;
 use turbojpeg::decompress_image;
 
@@ -23,19 +24,19 @@ pub fn load_image(path: &Path) -> Result<RawImage2d<'static, u8>, Box<dyn std::e
 
     let image: Image = match fast_load(path) {
         Ok(img) => img,
-        Err(_) => {
-            // println!("fast load failed: {:?}", err);
+        Err(err) => {
+            warn!("fast load failed: {:?}", err);
             match slow_load_rgb(path) {
                 Ok(img) => img,
-                Err(_) => {
-                    // println!("rgb slow load failed: {:?}", err);
+                Err(err) => {
+                    warn!("rgb slow load failed: {:?}", err);
                     slow_load_rgba(path)?
                 }
             }
         }
     };
 
-    println!("image decompressed: {:?}", start.elapsed());
+    info!("image decompressed: {:?}", start.elapsed());
 
     texture_from_image(image)
 }
@@ -98,7 +99,7 @@ fn fast_load(path: &Path) -> Result<Image, Box<dyn std::error::Error>> {
             }
         },
         _ => {
-            println!("no extension");
+            warn!("no extension");
             return Err(Box::new(io::Error::new(
                 ErrorKind::Other,
                 "unsupported extension",
@@ -109,7 +110,7 @@ fn fast_load(path: &Path) -> Result<Image, Box<dyn std::error::Error>> {
 
 fn slow_load_rgb(path: &Path) -> Result<Image, Box<dyn std::error::Error>> {
     let reader = image::io::Reader::open(path)?.with_guessed_format()?;
-    println!("detected format: {:?}", reader.format());
+    trace!("detected format: {:?}", reader.format());
     let decoded = reader.decode()?;
     let data = match decoded.as_rgb8() {
         Some(data) => data,
@@ -125,7 +126,7 @@ fn slow_load_rgb(path: &Path) -> Result<Image, Box<dyn std::error::Error>> {
 
 fn slow_load_rgba(path: &Path) -> Result<Image, Box<dyn std::error::Error>> {
     let reader = image::io::Reader::open(path)?.with_guessed_format()?;
-    println!("detected format: {:?}", reader.format());
+    trace!("detected format: {:?}", reader.format());
     let decoded = reader.decode()?;
     let data = match decoded.as_rgba8() {
         Some(data) => data,
@@ -191,7 +192,7 @@ fn texture_from_image(img: Image) -> Result<RawImage2d<'static, u8>, Box<dyn std
 pub fn icon() -> Result<(Vec<u8>, (u32, u32)), Box<dyn std::error::Error>> {
     let path = Path::new("./img/icon.ico");
     let reader = image::io::Reader::open(path)?.with_guessed_format()?;
-    println!("detected format: {:?}", reader.format());
+    trace!("detected format: {:?}", reader.format());
     let decoded = reader.decode()?;
     let data = match decoded.as_rgba8() {
         Some(data) => data,

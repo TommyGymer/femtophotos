@@ -6,6 +6,7 @@ use std::{
 };
 
 use glium::texture::Texture2dDataSink;
+use log::info;
 use qoi::encode_to_vec;
 use turbojpeg::compress_image;
 
@@ -32,7 +33,7 @@ pub fn save_image(data: Vec<u8>, width: u32, height: u32, path: &Path) {
                 let image = image::RgbaImage::from_vec(width, height, data).unwrap();
                 let jpg = compress_image(&image, 100, turbojpeg::Subsamp::None).unwrap();
                 fs::write(path, &jpg).unwrap();
-                println!("image saved at {:?}", path);
+                info!("image saved at {:?}", path);
             }
             Some("png") => {
                 let ref mut buf = BufWriter::new(File::create(path).unwrap());
@@ -44,12 +45,12 @@ pub fn save_image(data: Vec<u8>, width: u32, height: u32, path: &Path) {
 
                 let mut writer = encoder.write_header().unwrap();
                 writer.write_image_data(&data).unwrap();
-                println!("image saved at {:?}", path);
+                info!("image saved at {:?}", path);
             }
             Some("qoi") => {
                 let encoded = encode_to_vec(data, width, height).unwrap();
                 File::create(path).unwrap().write_all(&encoded).unwrap();
-                println!("image saved at {:?}", path);
+                info!("image saved at {:?}", path);
             }
             _ => return,
         },

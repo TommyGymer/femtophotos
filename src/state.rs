@@ -7,6 +7,7 @@ use std::{
 use crate::rotation::Rotation;
 use exif::Tag;
 use glium::glutin::event::ModifiersState;
+use log::{warn, info};
 
 pub struct State {
     pub rotation: Rotation,
@@ -42,7 +43,7 @@ impl State {
         let file = match fs::File::open(Path::new(&self.image_uri)) {
             Ok(f) => f,
             Err(err) => {
-                println!("{:?}", err);
+                warn!("{:?}", err);
                 return;
             }
         };
@@ -56,7 +57,6 @@ impl State {
                     .find(|f| f.tag == Tag::Orientation)
                 {
                     Some(orient) => {
-                        // println!("{:?}", orient.value);
                         match orient.value.get_uint(0) {
                             Some(1u32) => self.rotation = Rotation::UP,
                             Some(6u32) => self.rotation = Rotation::RIGHT,
@@ -70,7 +70,7 @@ impl State {
             }
             Err(err) => {
                 self.rotation = Rotation::UP;
-                println!("exif: {:?}", err);
+                warn!("exif: {:?}", err);
             }
         };
 
@@ -87,7 +87,7 @@ impl State {
         }) {
             Some(new_image) => {
                 self.image_uri = new_image.path().as_path().to_str().unwrap().to_string();
-                println!("Opening: {:?}", self.image_uri);
+                info!("Opening: {:?}", self.image_uri);
 
                 self.load_img();
             }
@@ -99,18 +99,17 @@ impl State {
         if self.image_changed || !self.running {
             return;
         }
-        // println!("Next");
 
         match self.get_dir_cont() {
             Ok(mut files) => {
                 files.sort_by(|a, b| a.path().partial_cmp(&b.path()).unwrap());
                 let mut i = files.into_iter();
-                // println!("{:?}", i);
+                
                 i.find(|f| f.path() == Path::new(&self.image_uri));
                 self.open_img(i);
             }
             Err(err) => {
-                println!("{:?}", err);
+                warn!("{:?}", err);
             }
         }
     }
@@ -119,18 +118,17 @@ impl State {
         if self.image_changed || !self.running {
             return;
         }
-        // println!("Prev");
 
         match self.get_dir_cont() {
             Ok(mut files) => {
                 files.sort_by(|a, b| a.path().partial_cmp(&b.path()).unwrap());
                 let mut i = files.into_iter().rev();
-                // println!("{:?}", i);
+                
                 i.find(|f| f.path() == Path::new(&self.image_uri));
                 self.open_img(i);
             }
             Err(err) => {
-                println!("{:?}", err);
+                warn!("{:?}", err);
             }
         }
     }

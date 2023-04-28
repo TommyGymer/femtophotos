@@ -1,4 +1,4 @@
-//#![windows_subsystem = "windows"]
+#![windows_subsystem = "windows"]
 
 #[macro_use]
 extern crate glium;
@@ -11,6 +11,7 @@ mod rotation;
 mod state;
 use rfd::FileDialog;
 use state::State;
+use image_saving::save_image;
 
 use glium::{
     glutin::{
@@ -20,9 +21,9 @@ use glium::{
     texture::SrgbTexture2d,
     Blend, Display, DrawParameters,
 };
+use core::fmt;
 use std::{env, ffi::OsString, path::Path, thread};
-
-use crate::image_saving::save_image;
+use log::{LevelFilter, warn, info};
 
 #[derive(Copy, Clone)]
 struct Vertex {
@@ -45,9 +46,47 @@ fn load_texture(
     Ok((texture, image_size))
 }
 
+#[derive(Debug, Clone)]
+struct LogFileError {
+    err_str: String,
+}
+
+impl fmt::Display for LogFileError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "LogFileError: {}", self.err_str)
+    }
+}
+
+fn attempt_log_file() -> Result<(), LogFileError> {
+    let current_exe = match env::current_exe() {
+        Ok(exe) => exe,
+        Err(err) => return Err(LogFileError { err_str: err.to_string() }),
+    };
+    let parent = match current_exe.parent() {
+        Some(parent) => parent,
+        None => return Err(LogFileError { err_str: String::from("executable had no parent") }),
+    };
+    let dir_str = match parent.to_str() {
+        Some(dir_str) => dir_str,
+        None => return Err(LogFileError { err_str: String::from("executable parent directory path was not a string") }),
+    };
+    match simple_logging::log_to_file(format!("{}/latest.log", dir_str), LevelFilter::Trace) {
+        Ok(()) => Ok(()),
+        Err(err) => return Err(LogFileError { err_str: err.to_string() }),
+    }
+}
+
 fn main() {
+    match attempt_log_file() {
+        Ok(()) => info!("Logging to latest.log"),
+        Err(err) => warn!("Logging to stdout: {:?}", err),
+    }
+
+    info!("dir: {:?}", env::current_dir());
+    info!("exe: {:?}", env::current_exe());
+
     let args: Vec<OsString> = env::args_os().collect();
-    dbg!(&args);
+    info!("{:?}", &args);
 
     use glium::glutin;
     use glium::Surface;
@@ -308,7 +347,7 @@ fn main() {
                                 .add_filter("QOI", &["qoi", "QOI"])
                                 .save_file();
 
-                            println!("Saving to {:?}", file);
+                            info!("Saving to {:?}", file);
 
                             let buf: image_saving::RGBAImageData =
                                 texture.read_to_pixel_buffer().read_as_texture_2d().unwrap();
