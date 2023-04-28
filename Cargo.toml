@@ -6,8 +6,8 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-glium = "*"
-image = "*"
+glium = "0.32.1"
+image = "0.24.6"
 spng = "0.1.0"
 turbojpeg = {version = "0.5.2", features = ["image"]}
 qoi = "0.4.1"

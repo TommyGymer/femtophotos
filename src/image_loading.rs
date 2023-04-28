@@ -213,8 +213,8 @@ mod image_loading_tests {
     const IMAGES: [&str; 8] = [
         "0",
         "dice",
-        "kodium10",
-        "kodium23",
+        "kodim10",
+        "kodim23",
         "qoi_logo",
         "testcard",
         "testcard_rgba",
@@ -226,8 +226,8 @@ mod image_loading_tests {
         let images = [
             String::from("0"),
             String::from("dice"),
-            String::from("kodium10"),
-            String::from("kodium23"),
+            String::from("kodim10"),
+            String::from("kodim23"),
             String::from("qoi_logo"),
             String::from("testcard"),
             String::from("testcard_rgba"),
@@ -245,31 +245,33 @@ mod image_loading_tests {
         assert!(load_image(Path::new("./test_images/0.jpg")).is_ok());
     }
 
-    // #[test]
-    // fn bench_png_load() {
-    //     for image in IMAGES {
-    //         let formatted = format!("./test_images/{:?}.png", String::from(image));
-    //         let path = Path::new(&formatted);
-    //         let result = load_image(path);
-    //         assert!(result.is_ok());
-    //     }
-    // }
+    #[test]
+    fn test_png_load() {
+        for image in IMAGES {
+            let formatted = format!("./test_images/{}.png", String::from(image));
+            let path = Path::new(&formatted);
+            let result = load_image(path);
+            assert!(result.is_ok());
+        }
+    }
 
-    // #[test]
-    // fn test_jpg_load() -> Result<(), Box<dyn std::error::Error>> {
-    //     for image in IMAGES {
-    //         let _ = load_image(Path::new(&format!("C:\\Users\\Tom\\Documents\\GitHub\\femtophotos\\test_images\\{:?}.jpg", String::from(image))))?;
-    //         assert!(true);
-    //     }
-    //     Ok(())
-    // }
+    #[test]
+    fn test_jpg_load() {
+        for image in IMAGES {
+            let formatted = format!("./test_images/{}.jpg", String::from(image));
+            let path = Path::new(&formatted);
+            let result = load_image(path);
+            assert!(result.is_ok());
+        }
+    }
 
-    // #[test]
-    // fn test_qoi_load() -> Result<(), Box<dyn std::error::Error>> {
-    //     for image in IMAGES {
-    //         let _ = load_image(Path::new(&format!("C:\\Users\\Tom\\Documents\\GitHub\\femtophotos\\test_images\\{:?}.qoi", String::from(image))))?;
-    //         assert!(true);
-    //     }
-    //     Ok(())
-    // }
+    #[test]
+    fn test_qoi_load() {
+        for image in IMAGES {
+            let formatted = format!("./test_images/{}.qoi", String::from(image));
+            let path = Path::new(&formatted);
+            let result = load_image(path);
+            assert!(result.is_ok());
+        }
+    }
 }

@@ -1,4 +1,4 @@
-#![windows_subsystem = "windows"]
+//#![windows_subsystem = "windows"]
 
 #[macro_use]
 extern crate glium;
@@ -211,7 +211,7 @@ fn main() {
                     glutin::event::TouchPhase::Ended => {
                         match (state.drag_origin, state.mouse_position) {
                             (Some(start), Some(end)) => {
-                                if start.0 < end.0 {
+                                if start.0.abs_diff(end.0) > 10 {
                                     state.prev_img();
                                 } else {
                                     state.next_img();
@@ -249,7 +249,7 @@ fn main() {
                     (1, ElementState::Released) => {
                         match (state.drag_origin, state.mouse_position) {
                             (Some(start), Some(end)) => {
-                                if start.0 < end.0 {
+                                if start.0.abs_diff(end.0) > 10 {
                                     state.prev_img();
                                 } else {
                                     state.next_img();
