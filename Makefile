@@ -8,3 +8,7 @@ r:
 
 t:
 	- cargo test
+
+lint:
+	- cargo fmt --all -- --check
+	- cargo clippy -- -D warnings

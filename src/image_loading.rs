@@ -15,11 +15,15 @@ use qoi::decode_to_vec;
 use turbojpeg::decompress_image;
 
 enum Image {
-    RGB(image::RgbImage),
-    RGBA(image::RgbaImage),
+    Rgb(image::RgbImage),
+    Rgba(image::RgbaImage),
 }
 
-pub fn load_image(path: &Path) -> Result<RawImage2d<'static, u8>, Box<dyn std::error::Error>> {
+type BoxedError = Box<dyn std::error::Error>;
+type ImageDimensions = (u32, u32);
+type RawImage = Vec<u8>;
+
+pub fn load_image(path: &Path) -> Result<RawImage2d<'static, u8>, BoxedError> {
     let start = Instant::now();
 
     let image: Image = match fast_load(path) {
@@ -41,27 +45,27 @@ pub fn load_image(path: &Path) -> Result<RawImage2d<'static, u8>, Box<dyn std::e
     texture_from_image(image)
 }
 
-fn fast_load(path: &Path) -> Result<Image, Box<dyn std::error::Error>> {
+fn fast_load(path: &Path) -> Result<Image, BoxedError> {
     match path.extension() {
         Some(ext) => match ext.to_ascii_lowercase().to_str() {
-            Some("jpg") | Some("jfif") => Ok(Image::RGBA(decompress_image(&(fs::read(path)?))?)),
+            Some("jpg") | Some("jfif") => Ok(Image::Rgba(decompress_image(&(fs::read(path)?))?)),
             Some("png") => {
                 let file = &(fs::read(path).unwrap());
                 let cursor = Cursor::new(file);
                 let decoder = spng::Decoder::new(cursor);
                 let (info, mut reader) = decoder.read_info()?;
 
-                let mut out: Vec<u8> = vec![0; reader.output_buffer_size()];
+                let mut out: RawImage = vec![0; reader.output_buffer_size()];
                 reader.next_frame(&mut out).unwrap();
 
                 match info.color_type {
-                    spng::ColorType::Truecolor => Ok(Image::RGB(rgb_image_from_raw(
+                    spng::ColorType::Truecolor => Ok(Image::Rgb(rgb_image_from_raw(
                         info.width,
                         info.height,
                         out,
                         path.to_path_buf(),
                     )?)),
-                    spng::ColorType::TruecolorAlpha => Ok(Image::RGBA(rgba_image_from_raw(
+                    spng::ColorType::TruecolorAlpha => Ok(Image::Rgba(rgba_image_from_raw(
                         info.width,
                         info.height,
                         out,
@@ -77,13 +81,13 @@ fn fast_load(path: &Path) -> Result<Image, Box<dyn std::error::Error>> {
                 let (header, decoded) = decode_to_vec(file)?;
 
                 match header.channels {
-                    qoi::Channels::Rgb => Ok(Image::RGB(rgb_image_from_raw(
+                    qoi::Channels::Rgb => Ok(Image::Rgb(rgb_image_from_raw(
                         header.width,
                         header.height,
                         decoded,
                         path.to_path_buf(),
                     )?)),
-                    qoi::Channels::Rgba => Ok(Image::RGBA(rgba_image_from_raw(
+                    qoi::Channels::Rgba => Ok(Image::Rgba(rgba_image_from_raw(
                         header.width,
                         header.height,
                         decoded,
@@ -91,24 +95,22 @@ fn fast_load(path: &Path) -> Result<Image, Box<dyn std::error::Error>> {
                     )?)),
                 }
             }
-            _ => {
-                return Err(Box::new(io::Error::new(
-                    ErrorKind::Other,
-                    "unsupported extension",
-                )))
-            }
+            _ => Err(Box::new(io::Error::new(
+                ErrorKind::Other,
+                "unsupported extension",
+            ))),
         },
         _ => {
             warn!("no extension");
-            return Err(Box::new(io::Error::new(
+            Err(Box::new(io::Error::new(
                 ErrorKind::Other,
                 "unsupported extension",
-            )));
+            )))
         }
     }
 }
 
-fn slow_load_rgb(path: &Path) -> Result<Image, Box<dyn std::error::Error>> {
+fn slow_load_rgb(path: &Path) -> Result<Image, BoxedError> {
     let reader = image::io::Reader::open(path)?.with_guessed_format()?;
     trace!("detected format: {:?}", reader.format());
     let decoded = reader.decode()?;
@@ -121,10 +123,10 @@ fn slow_load_rgb(path: &Path) -> Result<Image, Box<dyn std::error::Error>> {
             )))
         }
     };
-    Ok(Image::RGB(data.to_owned()))
+    Ok(Image::Rgb(data.to_owned()))
 }
 
-fn slow_load_rgba(path: &Path) -> Result<Image, Box<dyn std::error::Error>> {
+fn slow_load_rgba(path: &Path) -> Result<Image, BoxedError> {
     let reader = image::io::Reader::open(path)?.with_guessed_format()?;
     trace!("detected format: {:?}", reader.format());
     let decoded = reader.decode()?;
@@ -137,16 +139,16 @@ fn slow_load_rgba(path: &Path) -> Result<Image, Box<dyn std::error::Error>> {
             )))
         }
     };
-    Ok(Image::RGBA(data.to_owned()))
+    Ok(Image::Rgba(data.to_owned()))
 }
 
 fn rgb_image_from_raw(
     width: u32,
     height: u32,
-    data: Vec<u8>,
+    data: RawImage,
     ext: PathBuf,
 ) -> Result<image::RgbImage, image::ImageError> {
-    match image::ImageBuffer::<Rgb<u8>, Vec<u8>>::from_raw(width, height, data) {
+    match image::ImageBuffer::<Rgb<u8>, RawImage>::from_raw(width, height, data) {
         Some(image) => Ok(image),
         None => Err(image::ImageError::Decoding(DecodingError::new(
             ImageFormatHint::PathExtension(ext),
@@ -158,10 +160,10 @@ fn rgb_image_from_raw(
 fn rgba_image_from_raw(
     width: u32,
     height: u32,
-    data: Vec<u8>,
+    data: RawImage,
     ext: PathBuf,
 ) -> Result<image::RgbaImage, image::ImageError> {
-    match image::ImageBuffer::<Rgba<u8>, Vec<u8>>::from_raw(width, height, data) {
+    match image::ImageBuffer::<Rgba<u8>, RawImage>::from_raw(width, height, data) {
         Some(image) => Ok(image),
         None => Err(image::ImageError::Decoding(DecodingError::new(
             ImageFormatHint::PathExtension(ext),
@@ -170,16 +172,16 @@ fn rgba_image_from_raw(
     }
 }
 
-fn texture_from_image(img: Image) -> Result<RawImage2d<'static, u8>, Box<dyn std::error::Error>> {
+fn texture_from_image(img: Image) -> Result<RawImage2d<'static, u8>, BoxedError> {
     match img {
-        Image::RGB(img) => {
+        Image::Rgb(img) => {
             let image_dimensions = img.dimensions();
             Ok(glium::texture::RawImage2d::from_raw_rgb(
                 img.into_raw(),
                 image_dimensions,
             ))
         }
-        Image::RGBA(img) => {
+        Image::Rgba(img) => {
             let image_dimensions = img.dimensions();
             Ok(glium::texture::RawImage2d::from_raw_rgba(
                 img.into_raw(),
@@ -189,7 +191,7 @@ fn texture_from_image(img: Image) -> Result<RawImage2d<'static, u8>, Box<dyn std
     }
 }
 
-pub fn icon() -> Result<(Vec<u8>, (u32, u32)), Box<dyn std::error::Error>> {
+pub fn icon() -> Result<(RawImage, ImageDimensions), BoxedError> {
     let path = Path::new("./img/icon.ico");
     let reader = image::io::Reader::open(path)?.with_guessed_format()?;
     trace!("detected format: {:?}", reader.format());

@@ -23,7 +23,7 @@ pub struct State {
 impl State {
     pub fn default() -> Self {
         Self {
-            rotation: Rotation::UP,
+            rotation: Rotation::Up,
             directory: String::from("./img/"),
             image_uri: String::from("./img/no_image.png"),
             image_changed: false,
@@ -51,23 +51,18 @@ impl State {
         let exif_reader = exif::Reader::new();
         match exif_reader.read_from_container(&mut buf_reader) {
             Ok(exif) => {
-                match exif
-                    .fields()
-                    .into_iter()
-                    .find(|f| f.tag == Tag::Orientation)
-                {
-                    Some(orient) => match orient.value.get_uint(0) {
-                        Some(1u32) => self.rotation = Rotation::UP,
-                        Some(6u32) => self.rotation = Rotation::RIGHT,
-                        Some(3u32) => self.rotation = Rotation::DOWN,
-                        Some(8u32) => self.rotation = Rotation::LEFT,
-                        _ => self.rotation = Rotation::UP,
-                    },
-                    None => {}
+                if let Some(orient) = exif.fields().find(|f| f.tag == Tag::Orientation) {
+                    match orient.value.get_uint(0) {
+                        Some(1u32) => self.rotation = Rotation::Up,
+                        Some(6u32) => self.rotation = Rotation::Right,
+                        Some(3u32) => self.rotation = Rotation::Down,
+                        Some(8u32) => self.rotation = Rotation::Left,
+                        _ => self.rotation = Rotation::Up,
+                    }
                 }
             }
             Err(err) => {
-                self.rotation = Rotation::UP;
+                self.rotation = Rotation::Up;
                 warn!("exif: {:?}", err);
             }
         };
@@ -76,27 +71,21 @@ impl State {
     }
 
     fn open_img<I: Iterator<Item = DirEntry>>(&mut self, mut i: I) {
-        match i.find(|f| match f.path().as_path().extension() {
+        if let Some(new_image) = i.find(|f| match f.path().as_path().extension() {
             Some(ext) => match ext.to_ascii_lowercase().to_str() {
                 Some(extension) => ["png", "jpg", "qoi", "ico", "jfif"].contains(&extension),
                 None => false,
             },
             None => false,
         }) {
-            Some(new_image) => {
-                self.image_uri = new_image.path().as_path().to_str().unwrap().to_string();
-                info!("Opening: {:?}", self.image_uri);
-
-                self.load_img();
-            }
-            None => return,
+            self.image_uri = new_image.path().as_path().to_str().unwrap().to_string();
+            info!("Opening: {:?}", self.image_uri);
+            self.load_img();
         };
     }
 
     pub fn next_img(&mut self) {
-        if self.image_changed || !self.running {
-            return;
-        }
+        if self.image_changed || !self.running {}
 
         match self.get_dir_cont() {
             Ok(mut files) => {
@@ -113,9 +102,7 @@ impl State {
     }
 
     pub fn prev_img(&mut self) {
-        if self.image_changed || !self.running {
-            return;
-        }
+        if self.image_changed || !self.running {}
 
         match self.get_dir_cont() {
             Ok(mut files) => {

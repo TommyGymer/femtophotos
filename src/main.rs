@@ -1,5 +1,4 @@
 #![windows_subsystem = "windows"]
-
 #[macro_use]
 extern crate glium;
 extern crate exif;
@@ -84,11 +83,9 @@ fn attempt_log_file() -> Result<(), LogFileError> {
     };
     match simple_logging::log_to_file(format!("{}/latest.log", dir_str), LevelFilter::Trace) {
         Ok(()) => Ok(()),
-        Err(err) => {
-            return Err(LogFileError {
-                err_str: err.to_string(),
-            })
-        }
+        Err(err) => Err(LogFileError {
+            err_str: err.to_string(),
+        }),
     }
 }
 
@@ -233,7 +230,7 @@ fn main() {
         target
             .draw(
                 &vertex_buffer,
-                &indices,
+                indices,
                 &program,
                 &uniforms,
                 &DrawParameters {
@@ -255,7 +252,6 @@ fn main() {
                 glutin::event::WindowEvent::CloseRequested => {
                     *control_flow = glutin::event_loop::ControlFlow::Exit;
                     state.running = false;
-                    return;
                 }
                 glutin::event::WindowEvent::ModifiersChanged(mod_state) => {
                     if mod_state.is_empty() {
@@ -275,15 +271,13 @@ fn main() {
                         state.drag_origin = Some((touch.location.x as u32, touch.location.y as u32))
                     }
                     glutin::event::TouchPhase::Ended => {
-                        match (state.drag_origin, state.mouse_position) {
-                            (Some(start), Some(end)) => {
-                                if start.0.abs_diff(end.0) > 10 {
-                                    state.prev_img();
-                                } else {
-                                    state.next_img();
-                                }
+                        if let (Some(start), Some(end)) = (state.drag_origin, state.mouse_position)
+                        {
+                            if start.0.abs_diff(end.0) > 10 {
+                                state.prev_img();
+                            } else {
+                                state.next_img();
                             }
-                            _ => return,
                         }
                     }
                     glutin::event::TouchPhase::Moved => {
@@ -295,7 +289,7 @@ fn main() {
                         state.mouse_position = None;
                     }
                 },
-                _ => return,
+                _ => (),
                 //_ => println!("{:?}", event),
             },
             glutin::event::Event::DeviceEvent {
@@ -313,18 +307,16 @@ fn main() {
                         state.drag_origin = state.mouse_position;
                     }
                     (1, ElementState::Released) => {
-                        match (state.drag_origin, state.mouse_position) {
-                            (Some(start), Some(end)) => {
-                                if start.0.abs_diff(end.0) > 10 {
-                                    state.prev_img();
-                                } else {
-                                    state.next_img();
-                                }
+                        if let (Some(start), Some(end)) = (state.drag_origin, state.mouse_position)
+                        {
+                            if start.0.abs_diff(end.0) > 10 {
+                                state.prev_img();
+                            } else {
+                                state.next_img();
                             }
-                            _ => return,
                         }
                     }
-                    _ => return,
+                    _ => (),
                     //_ => println!("{:?}", event),
                 },
                 glutin::event::DeviceEvent::Key(k) => {
@@ -375,10 +367,10 @@ fn main() {
                                 save_image(data, size.0, size.1, file.unwrap().as_path());
                             });
                         }
-                        _ => return, //println!("returned {:?}", k),
+                        _ => (), //println!("returned {:?}", k),
                     }
                 }
-                _ => return,
+                _ => (),
             },
             _ => (),
         }
@@ -392,6 +384,7 @@ fn flatten(data: Vec<(u8, u8, u8, u8)>) -> Vec<u8> {
     let mut result = data;
     unsafe {
         result.set_len(size * 4);
+        #[allow(clippy::unsound_collection_transmute)]
         std::mem::transmute(result)
     }
 }

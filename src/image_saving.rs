@@ -36,7 +36,7 @@ pub fn save_image(data: Vec<u8>, width: u32, height: u32, path: &Path) {
                 info!("image saved at {:?}", path);
             }
             Some("png") => {
-                let ref mut buf = BufWriter::new(File::create(path).unwrap());
+                let buf = &mut BufWriter::new(File::create(path).unwrap());
 
                 let mut encoder = png::Encoder::new(buf, width, height);
                 encoder.set_color(png::ColorType::Rgba);
@@ -52,7 +52,7 @@ pub fn save_image(data: Vec<u8>, width: u32, height: u32, path: &Path) {
                 File::create(path).unwrap().write_all(&encoded).unwrap();
                 info!("image saved at {:?}", path);
             }
-            _ => return,
+            _ => (),
         },
         None => todo!(),
     };
