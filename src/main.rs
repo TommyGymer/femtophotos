@@ -2,18 +2,25 @@
 
 #[macro_use]
 extern crate glium;
-extern crate image;
 extern crate exif;
+extern crate image;
 
-mod rotation;
 mod image_loading;
 mod image_saving;
+mod rotation;
 mod state;
 use rfd::FileDialog;
 use state::State;
 
-use std::{path::Path, time::Instant, ffi::OsString, env, thread};
-use glium::{glutin::{event::{ElementState, ModifiersState, VirtualKeyCode}, window::Icon}, texture::SrgbTexture2d, Display, DrawParameters, Blend};
+use glium::{
+    glutin::{
+        event::{ElementState, ModifiersState, VirtualKeyCode},
+        window::Icon,
+    },
+    texture::SrgbTexture2d,
+    Blend, Display, DrawParameters,
+};
+use std::{env, ffi::OsString, path::Path, thread, time::Instant};
 
 use crate::image_saving::save_image;
 
@@ -25,7 +32,10 @@ struct Vertex {
 
 implement_vertex!(Vertex, position, tex_coords);
 
-fn load_texture(display: &Display, state: &State) -> Result<(SrgbTexture2d, (u32, u32)), Box<dyn std::error::Error>> {
+fn load_texture(
+    display: &Display,
+    state: &State,
+) -> Result<(SrgbTexture2d, (u32, u32)), Box<dyn std::error::Error>> {
     let start = Instant::now();
     let image = image_loading::load_image(Path::new(&state.image_uri))?;
     let image_size = (image.width, image.height);
@@ -47,7 +57,10 @@ fn main() {
         Ok((data, (width, height))) => Some(Icon::from_rgba(data, width, height).unwrap()),
         Err(_) => None,
     };
-    let wb = glutin::window::WindowBuilder::new().with_title("FemtoPhotos: ").with_transparent(true).with_window_icon(icon);
+    let wb = glutin::window::WindowBuilder::new()
+        .with_title("FemtoPhotos: ")
+        .with_transparent(true)
+        .with_window_icon(icon);
     let cb = glutin::ContextBuilder::new();
     let display = glium::Display::new(wb, cb, &event_loop).unwrap();
 
@@ -107,7 +120,12 @@ fn main() {
     let mut state = State::default();
     if args.len() > 1 {
         state.image_uri = args.get(1).unwrap().to_str().unwrap().to_string();
-        state.directory = Path::new(&state.image_uri).parent().unwrap().to_str().unwrap().to_string();
+        state.directory = Path::new(&state.image_uri)
+            .parent()
+            .unwrap()
+            .to_str()
+            .unwrap()
+            .to_string();
     }
     state.load_img();
 
@@ -126,7 +144,14 @@ fn main() {
                 Err(err) => panic!("{:?}", err),
             };
 
-            display.gl_window().window().set_title(&format!("FemtoPhotos: {}", Path::new(&state.image_uri).file_name().unwrap().to_str().unwrap()));
+            display.gl_window().window().set_title(&format!(
+                "FemtoPhotos: {}",
+                Path::new(&state.image_uri)
+                    .file_name()
+                    .unwrap()
+                    .to_str()
+                    .unwrap()
+            ));
 
             state.image_changed = false;
         }
@@ -145,7 +170,10 @@ fn main() {
                 &indices,
                 &program,
                 &uniforms,
-                &DrawParameters {blend: Blend::alpha_blending(), .. Default::default()},
+                &DrawParameters {
+                    blend: Blend::alpha_blending(),
+                    ..Default::default()
+                },
             )
             .unwrap();
 
@@ -162,40 +190,43 @@ fn main() {
                     *control_flow = glutin::event_loop::ControlFlow::Exit;
                     state.running = false;
                     return;
-                },
+                }
                 glutin::event::WindowEvent::ModifiersChanged(mod_state) => {
                     if mod_state.is_empty() {
                         state.modifiers = None;
                     } else {
                         state.modifiers = Some(mod_state);
                     }
-                },
+                }
                 glutin::event::WindowEvent::CursorMoved { position, .. } => {
                     state.mouse_position = Some((position.x as u32, position.y as u32));
-                },
+                }
                 glutin::event::WindowEvent::CursorLeft { .. } => {
                     state.mouse_position = None;
-                },
-                glutin::event::WindowEvent::Touch (touch) => {
-                    match touch.phase {
-                        glutin::event::TouchPhase::Started => state.drag_origin = Some((touch.location.x as u32, touch.location.y as u32)),
-                        glutin::event::TouchPhase::Ended => {
-                            match (state.drag_origin, state.mouse_position) {
-                                (Some(start), Some(end)) => {
-                                    if start.0 < end.0 {
-                                        state.prev_img();
-                                    } else {
-                                        state.next_img();
-                                    }
+                }
+                glutin::event::WindowEvent::Touch(touch) => match touch.phase {
+                    glutin::event::TouchPhase::Started => {
+                        state.drag_origin = Some((touch.location.x as u32, touch.location.y as u32))
+                    }
+                    glutin::event::TouchPhase::Ended => {
+                        match (state.drag_origin, state.mouse_position) {
+                            (Some(start), Some(end)) => {
+                                if start.0 < end.0 {
+                                    state.prev_img();
+                                } else {
+                                    state.next_img();
                                 }
-                                _ => return,
                             }
-                        },
-                        glutin::event::TouchPhase::Moved => state.mouse_position = Some((touch.location.x as u32, touch.location.y as u32)),
-                        _ => {
-                            state.drag_origin = None;
-                            state.mouse_position = None;
-                        },
+                            _ => return,
+                        }
+                    }
+                    glutin::event::TouchPhase::Moved => {
+                        state.mouse_position =
+                            Some((touch.location.x as u32, touch.location.y as u32))
+                    }
+                    _ => {
+                        state.drag_origin = None;
+                        state.mouse_position = None;
                     }
                 },
                 _ => return,
@@ -238,31 +269,38 @@ fn main() {
                             } else {
                                 state.rotation = state.rotation.clockwise();
                             }
-                        },
+                        }
                         (Some(VirtualKeyCode::R), ElementState::Pressed, None) => {
                             state.rotation = state.rotation.clockwise();
-                        },
+                        }
                         (Some(VirtualKeyCode::Space), ElementState::Pressed, None) => {
                             state.next_img();
-                        },
+                        }
                         (Some(VirtualKeyCode::Right), ElementState::Pressed, None) => {
                             state.next_img();
-                        },
+                        }
                         (Some(VirtualKeyCode::Left), ElementState::Pressed, None) => {
                             state.prev_img();
-                        },
-                        (Some(VirtualKeyCode::S,), ElementState::Released, None) => {
+                        }
+                        (Some(VirtualKeyCode::S), ElementState::Released, None) => {
                             let file = FileDialog::new()
-                                    .set_directory(Path::new(&state.directory))
-                                    .set_file_name(Path::new(&state.image_uri).file_name().unwrap().to_str().unwrap())
-                                    .add_filter("JPG", &["jpg", "JPG", "jpeg", "JPEG"])
-                                    .add_filter("PNG", &["png", "PNG"])
-                                    .add_filter("QOI", &["qoi", "QOI"])
-                                    .save_file();
+                                .set_directory(Path::new(&state.directory))
+                                .set_file_name(
+                                    Path::new(&state.image_uri)
+                                        .file_name()
+                                        .unwrap()
+                                        .to_str()
+                                        .unwrap(),
+                                )
+                                .add_filter("JPG", &["jpg", "JPG", "jpeg", "JPEG"])
+                                .add_filter("PNG", &["png", "PNG"])
+                                .add_filter("QOI", &["qoi", "QOI"])
+                                .save_file();
 
                             println!("Saving to {:?}", file);
 
-                            let buf: image_saving::RGBAImageData = texture.read_to_pixel_buffer().read_as_texture_2d().unwrap();
+                            let buf: image_saving::RGBAImageData =
+                                texture.read_to_pixel_buffer().read_as_texture_2d().unwrap();
                             let size = (texture.width(), texture.height());
 
                             thread::spawn(move || {
@@ -270,7 +308,7 @@ fn main() {
 
                                 save_image(data, size.0, size.1, file.unwrap().as_path());
                             });
-                        },
+                        }
                         _ => return, //println!("returned {:?}", k),
                     }
                 }

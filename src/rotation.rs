@@ -29,14 +29,18 @@ impl Rotation {
         let (mut t, mut s) = match self {
             Rotation::UP | Rotation::DOWN => (
                 (d_size.1 * i_size.0) as f32 / (d_size.0 * i_size.1) as f32,
-                (d_size.0 * i_size.1) as f32 / (d_size.1 * i_size.0) as f32
+                (d_size.0 * i_size.1) as f32 / (d_size.1 * i_size.0) as f32,
             ),
             Rotation::RIGHT | Rotation::LEFT => (
                 (d_size.0 * i_size.0) as f32 / (d_size.1 * i_size.1) as f32,
-                (d_size.1 * i_size.1) as f32 / (d_size.0 * i_size.0) as f32
+                (d_size.1 * i_size.1) as f32 / (d_size.0 * i_size.0) as f32,
             ),
         };
-        if t < 1.0 { s = 1.0; } else { t = 1.0; }
+        if t < 1.0 {
+            s = 1.0;
+        } else {
+            t = 1.0;
+        }
         match self {
             Rotation::UP => [[t, 0.0], [0.0, -s]],
             Rotation::RIGHT => [[0.0, -t], [-s, 0.0]],

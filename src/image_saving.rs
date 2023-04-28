@@ -1,4 +1,9 @@
-use std::{borrow::Cow, path::Path, fs::{self, File}, io::{BufWriter, Write}};
+use std::{
+    borrow::Cow,
+    fs::{self, File},
+    io::{BufWriter, Write},
+    path::Path,
+};
 
 use glium::texture::Texture2dDataSink;
 use qoi::encode_to_vec;
@@ -28,10 +33,10 @@ pub fn save_image(data: Vec<u8>, width: u32, height: u32, path: &Path) {
                 let jpg = compress_image(&image, 100, turbojpeg::Subsamp::None).unwrap();
                 fs::write(path, &jpg).unwrap();
                 println!("image saved at {:?}", path);
-            },
+            }
             Some("png") => {
                 let ref mut buf = BufWriter::new(File::create(path).unwrap());
-                
+
                 let mut encoder = png::Encoder::new(buf, width, height);
                 encoder.set_color(png::ColorType::Rgba);
                 encoder.set_depth(png::BitDepth::Eight);
@@ -40,7 +45,7 @@ pub fn save_image(data: Vec<u8>, width: u32, height: u32, path: &Path) {
                 let mut writer = encoder.write_header().unwrap();
                 writer.write_image_data(&data).unwrap();
                 println!("image saved at {:?}", path);
-            },
+            }
             Some("qoi") => {
                 let encoded = encode_to_vec(data, width, height).unwrap();
                 File::create(path).unwrap().write_all(&encoded).unwrap();

@@ -1,8 +1,12 @@
-use std::{path::Path, fs::{self, DirEntry}, io};
+use std::{
+    fs::{self, DirEntry},
+    io,
+    path::Path,
+};
 
+use crate::rotation::Rotation;
 use exif::Tag;
 use glium::glutin::event::ModifiersState;
-use crate::rotation::Rotation;
 
 pub struct State {
     pub rotation: Rotation,
@@ -46,7 +50,11 @@ impl State {
         let exif_reader = exif::Reader::new();
         match exif_reader.read_from_container(&mut buf_reader) {
             Ok(exif) => {
-                match exif.fields().into_iter().find(|f| f.tag == Tag::Orientation) {
+                match exif
+                    .fields()
+                    .into_iter()
+                    .find(|f| f.tag == Tag::Orientation)
+                {
                     Some(orient) => {
                         // println!("{:?}", orient.value);
                         match orient.value.get_uint(0) {
@@ -56,10 +64,10 @@ impl State {
                             Some(8u32) => self.rotation = Rotation::LEFT,
                             _ => self.rotation = Rotation::UP,
                         }
-                    },
-                    None => {},
+                    }
+                    None => {}
                 }
-            },
+            }
             Err(err) => {
                 self.rotation = Rotation::UP;
                 println!("exif: {:?}", err);
@@ -70,29 +78,29 @@ impl State {
     }
 
     fn open_img<I: Iterator<Item = DirEntry>>(&mut self, mut i: I) {
-        match i.find(|f| {
-            match f.path().as_path().extension() {
-                Some(ext) => match ext.to_ascii_lowercase().to_str() {
-                    Some(extension) => ["png", "jpg", "qoi", "ico", "jfif"].contains(&extension),
-                    None => false,
-                },
+        match i.find(|f| match f.path().as_path().extension() {
+            Some(ext) => match ext.to_ascii_lowercase().to_str() {
+                Some(extension) => ["png", "jpg", "qoi", "ico", "jfif"].contains(&extension),
                 None => false,
-            }
+            },
+            None => false,
         }) {
             Some(new_image) => {
                 self.image_uri = new_image.path().as_path().to_str().unwrap().to_string();
                 println!("Opening: {:?}", self.image_uri);
 
                 self.load_img();
-            },
+            }
             None => return,
         };
     }
 
     pub fn next_img(&mut self) {
-        if self.image_changed || !self.running {return;}
+        if self.image_changed || !self.running {
+            return;
+        }
         // println!("Next");
-        
+
         match self.get_dir_cont() {
             Ok(mut files) => {
                 files.sort_by(|a, b| a.path().partial_cmp(&b.path()).unwrap());
@@ -100,7 +108,7 @@ impl State {
                 // println!("{:?}", i);
                 i.find(|f| f.path() == Path::new(&self.image_uri));
                 self.open_img(i);
-            },
+            }
             Err(err) => {
                 println!("{:?}", err);
             }
@@ -108,9 +116,11 @@ impl State {
     }
 
     pub fn prev_img(&mut self) {
-        if self.image_changed || !self.running {return;}
+        if self.image_changed || !self.running {
+            return;
+        }
         // println!("Prev");
-        
+
         match self.get_dir_cont() {
             Ok(mut files) => {
                 files.sort_by(|a, b| a.path().partial_cmp(&b.path()).unwrap());
@@ -118,7 +128,7 @@ impl State {
                 // println!("{:?}", i);
                 i.find(|f| f.path() == Path::new(&self.image_uri));
                 self.open_img(i);
-            },
+            }
             Err(err) => {
                 println!("{:?}", err);
             }
