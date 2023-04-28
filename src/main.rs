@@ -9,10 +9,11 @@ mod image_loading;
 mod image_saving;
 mod rotation;
 mod state;
+use image_saving::save_image;
 use rfd::FileDialog;
 use state::State;
-use image_saving::save_image;
 
+use core::fmt;
 use glium::{
     glutin::{
         event::{ElementState, ModifiersState, VirtualKeyCode},
@@ -21,9 +22,8 @@ use glium::{
     texture::SrgbTexture2d,
     Blend, Display, DrawParameters,
 };
-use core::fmt;
+use log::{info, warn, LevelFilter};
 use std::{env, ffi::OsString, path::Path, thread};
-use log::{LevelFilter, warn, info};
 
 #[derive(Copy, Clone)]
 struct Vertex {
@@ -60,19 +60,35 @@ impl fmt::Display for LogFileError {
 fn attempt_log_file() -> Result<(), LogFileError> {
     let current_exe = match env::current_exe() {
         Ok(exe) => exe,
-        Err(err) => return Err(LogFileError { err_str: err.to_string() }),
+        Err(err) => {
+            return Err(LogFileError {
+                err_str: err.to_string(),
+            })
+        }
     };
     let parent = match current_exe.parent() {
         Some(parent) => parent,
-        None => return Err(LogFileError { err_str: String::from("executable had no parent") }),
+        None => {
+            return Err(LogFileError {
+                err_str: String::from("executable had no parent"),
+            })
+        }
     };
     let dir_str = match parent.to_str() {
         Some(dir_str) => dir_str,
-        None => return Err(LogFileError { err_str: String::from("executable parent directory path was not a string") }),
+        None => {
+            return Err(LogFileError {
+                err_str: String::from("executable parent directory path was not a string"),
+            })
+        }
     };
     match simple_logging::log_to_file(format!("{}/latest.log", dir_str), LevelFilter::Trace) {
         Ok(()) => Ok(()),
-        Err(err) => return Err(LogFileError { err_str: err.to_string() }),
+        Err(err) => {
+            return Err(LogFileError {
+                err_str: err.to_string(),
+            })
+        }
     }
 }
 

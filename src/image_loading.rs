@@ -10,7 +10,7 @@ use image::{
     error::{DecodingError, ImageFormatHint},
     Rgb, Rgba,
 };
-use log::{trace, warn, info};
+use log::{info, trace, warn};
 use qoi::decode_to_vec;
 use turbojpeg::decompress_image;
 
@@ -242,7 +242,7 @@ mod image_loading_tests {
     }
 
     #[test]
-    fn test_load_image()  {
+    fn test_load_image() {
         assert!(load_image(Path::new("./test_images/0.jpg")).is_ok());
     }
 

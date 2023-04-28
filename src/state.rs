@@ -7,7 +7,7 @@ use std::{
 use crate::rotation::Rotation;
 use exif::Tag;
 use glium::glutin::event::ModifiersState;
-use log::{warn, info};
+use log::{info, warn};
 
 pub struct State {
     pub rotation: Rotation,
@@ -56,15 +56,13 @@ impl State {
                     .into_iter()
                     .find(|f| f.tag == Tag::Orientation)
                 {
-                    Some(orient) => {
-                        match orient.value.get_uint(0) {
-                            Some(1u32) => self.rotation = Rotation::UP,
-                            Some(6u32) => self.rotation = Rotation::RIGHT,
-                            Some(3u32) => self.rotation = Rotation::DOWN,
-                            Some(8u32) => self.rotation = Rotation::LEFT,
-                            _ => self.rotation = Rotation::UP,
-                        }
-                    }
+                    Some(orient) => match orient.value.get_uint(0) {
+                        Some(1u32) => self.rotation = Rotation::UP,
+                        Some(6u32) => self.rotation = Rotation::RIGHT,
+                        Some(3u32) => self.rotation = Rotation::DOWN,
+                        Some(8u32) => self.rotation = Rotation::LEFT,
+                        _ => self.rotation = Rotation::UP,
+                    },
                     None => {}
                 }
             }
@@ -104,7 +102,7 @@ impl State {
             Ok(mut files) => {
                 files.sort_by(|a, b| a.path().partial_cmp(&b.path()).unwrap());
                 let mut i = files.into_iter();
-                
+
                 i.find(|f| f.path() == Path::new(&self.image_uri));
                 self.open_img(i);
             }
@@ -123,7 +121,7 @@ impl State {
             Ok(mut files) => {
                 files.sort_by(|a, b| a.path().partial_cmp(&b.path()).unwrap());
                 let mut i = files.into_iter().rev();
-                
+
                 i.find(|f| f.path() == Path::new(&self.image_uri));
                 self.open_img(i);
             }
