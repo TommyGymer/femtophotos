@@ -20,6 +20,11 @@ jobs:
           toolchain: stable
           override: true
           components: rustfmt, clippy
+      - name: Install nasm
+        uses: ilammy/setup-nasm@v1
+      - name: Setup-Linux
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+        run: sudo apt install build-essential libgtk-3-dev
       - name: Set up cargo cache
         uses: actions/cache@v3
         continue-on-error: false
@@ -51,9 +56,5 @@ jobs:
           rm -rf ~/.cargo/advisory-db
           cargo audit
           cargo pants
-      - uses: ilammy/setup-nasm@v1
-      - name: Setup-Linux
-        if: ${{ matrix.os == 'ubuntu-latest' }}
-        run: sudo apt install build-essential libgtk-3-dev
       - name: Run tests
         run: cargo test
