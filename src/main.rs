@@ -187,8 +187,13 @@ fn main() {
 
     (texture, image_size) = match load_texture(&display, &state) {
         Ok(res) => res,
-        Err(err) => panic!("{:?}", err),
+        Err(err) => {
+            info!("{:?}", err);
+            panic!("{:?}", err);
+        },
     };
+
+    info!("First texture loaded");
 
     display.gl_window().window().set_title(&format!(
         "FemtoPhotos: {}",
@@ -200,6 +205,8 @@ fn main() {
     ));
 
     state.image_changed = false;
+
+    info!("Render loop started");
 
     event_loop.run(move |ev, _, control_flow| {
         if state.image_changed && state.running {
@@ -274,9 +281,9 @@ fn main() {
                     glutin::event::TouchPhase::Ended => {
                         if let (Some(start), Some(end)) = (state.drag_origin, state.mouse_position)
                         {
-                            if start.0.abs_diff(end.0) > 10 {
+                            if start.0 - end.0 > 10 {
                                 state.prev_img();
-                            } else {
+                            } else if end.0 - start.0 > 10 {
                                 state.next_img();
                             }
                         }
@@ -310,9 +317,9 @@ fn main() {
                     (1, ElementState::Released) => {
                         if let (Some(start), Some(end)) = (state.drag_origin, state.mouse_position)
                         {
-                            if start.0.abs_diff(end.0) > 10 {
+                            if start.0 - end.0 > 10 {
                                 state.prev_img();
-                            } else {
+                            } else if end.0 - start.0 > 10 {
                                 state.next_img();
                             }
                         }
