@@ -1,8 +1,8 @@
 use std::{
-    fs,
+    env, fs,
     io::{self, Cursor, ErrorKind},
     path::{Path, PathBuf},
-    time::Instant, env,
+    time::Instant,
 };
 
 use glium::texture::RawImage2d;
