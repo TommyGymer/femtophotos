@@ -2,7 +2,7 @@ use std::{
     fs,
     io::{self, Cursor, ErrorKind},
     path::{Path, PathBuf},
-    time::Instant,
+    time::Instant, env,
 };
 
 use glium::texture::RawImage2d;
@@ -192,7 +192,18 @@ fn texture_from_image(img: Image) -> Result<RawImage2d<'static, u8>, BoxedError>
 }
 
 pub fn icon() -> Result<(RawImage, ImageDimensions), BoxedError> {
-    let path = Path::new("./img/icon.ico");
+    let current_exe = env::current_exe()?;
+    let parent = match current_exe.parent() {
+        Some(parent) => parent,
+        None => {
+            return Err(Box::new(io::Error::new(
+                ErrorKind::NotFound,
+                "executable had no parent",
+            )))
+        }
+    };
+    let path_str = format!("{}/img/icon.ico", parent.to_str().unwrap());
+    let path = Path::new(&path_str);
     let reader = image::io::Reader::open(path)?.with_guessed_format()?;
     trace!("detected format: {:?}", reader.format());
     let decoded = reader.decode()?;
