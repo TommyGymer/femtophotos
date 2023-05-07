@@ -22,7 +22,7 @@ use glium::{
     texture::SrgbTexture2d,
     Blend, Display, DrawParameters,
 };
-use log::{info, warn, LevelFilter};
+use log::{info, warn, LevelFilter, trace, debug};
 use std::{env, ffi::OsString, path::Path, thread};
 
 #[derive(Copy, Clone)]
@@ -254,10 +254,15 @@ fn main() {
         //     std::time::Duration::from_nanos(16_666_667);
         // *control_flow = glutin::event_loop::ControlFlow::WaitUntil(next_frame_time);
 
+        if !state.running {
+            ()
+        }
+
         // println!("{:?}", ev);
         match ev {
             glutin::event::Event::WindowEvent { event, .. } => match event {
                 glutin::event::WindowEvent::CloseRequested => {
+                    debug!("Close requested");
                     *control_flow = glutin::event_loop::ControlFlow::Exit;
                     state.running = false;
                 }
@@ -281,9 +286,10 @@ fn main() {
                     glutin::event::TouchPhase::Ended => {
                         if let (Some(start), Some(end)) = (state.drag_origin, state.mouse_position)
                         {
-                            if start.0 - end.0 > 10 {
+                            trace!("mouse: start@{} end@{} prev:{} next:{}", start.0, end.0, start.0 > end.0 + 10, end.0 > start.0 + 10);
+                            if start.0 > end.0 + 10 {
                                 state.prev_img();
-                            } else if end.0 - start.0 > 10 {
+                            } else if end.0 > start.0 + 10 {
                                 state.next_img();
                             }
                         }
@@ -317,9 +323,10 @@ fn main() {
                     (1, ElementState::Released) => {
                         if let (Some(start), Some(end)) = (state.drag_origin, state.mouse_position)
                         {
-                            if start.0 - end.0 > 10 {
+                            trace!("touch: start@{} end@{} prev:{} next:{}", start.0, end.0, start.0 > end.0 + 10, end.0 > start.0 + 10);
+                            if start.0 > end.0 + 10 {
                                 state.prev_img();
-                            } else if end.0 - start.0 > 10 {
+                            } else if end.0 > start.0 + 10 {
                                 state.next_img();
                             }
                         }

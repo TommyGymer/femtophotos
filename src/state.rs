@@ -7,7 +7,7 @@ use std::{
 use crate::rotation::Rotation;
 use exif::Tag;
 use glium::glutin::event::ModifiersState;
-use log::{info, warn};
+use log::{info, warn, trace};
 
 pub struct State {
     pub rotation: Rotation,
@@ -86,6 +86,7 @@ impl State {
 
     pub fn next_img(&mut self) {
         if self.image_changed || !self.running {}
+        trace!("next image");
 
         match self.get_dir_cont() {
             Ok(mut files) => {
@@ -103,6 +104,7 @@ impl State {
 
     pub fn prev_img(&mut self) {
         if self.image_changed || !self.running {}
+        trace!("prev image");
 
         match self.get_dir_cont() {
             Ok(mut files) => {
