@@ -34,7 +34,26 @@ pub fn load_image(path: &Path) -> Result<RawImage2d<'static, u8>, BoxedError> {
                 Ok(img) => img,
                 Err(err) => {
                     warn!("rgb slow load failed: {:?}", err);
-                    slow_load_rgba(path)?
+                    match slow_load_rgba(path) {
+                        Ok(img) => img,
+                        Err(err) => {
+                            warn!("rgba slow load failed: {:?}", err);
+
+                            let current_exe = env::current_exe()?;
+                            let parent = match current_exe.parent() {
+                                Some(parent) => parent,
+                                None => {
+                                    return Err(Box::new(io::Error::new(
+                                        ErrorKind::NotFound,
+                                        "executable had no parent",
+                                    )))
+                                }
+                            };
+                            let path_str = format!("{}/img/no_image.png", parent.to_str().unwrap());
+                            let path = Path::new(&path_str);
+                            return load_image(path);
+                        }
+                    }
                 }
             }
         }
