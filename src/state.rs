@@ -7,7 +7,7 @@ use std::{
 use crate::rotation::Rotation;
 use exif::Tag;
 use glium::glutin::event::ModifiersState;
-use log::{info, warn, trace};
+use log::{info, trace, warn};
 
 pub struct State {
     pub rotation: Rotation,
