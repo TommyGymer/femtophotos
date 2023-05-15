@@ -10,7 +10,7 @@ use image::{
     error::{DecodingError, ImageFormatHint},
     Rgb, Rgba,
 };
-use log::{info, trace, warn, debug};
+use log::{debug, info, trace, warn};
 use qoi::decode_to_vec;
 use turbojpeg::decompress_image;
 
