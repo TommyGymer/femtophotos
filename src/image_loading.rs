@@ -10,13 +10,23 @@ use image::{
     error::{DecodingError, ImageFormatHint},
     Rgb, Rgba,
 };
-use log::{info, trace, warn};
+use log::{info, trace, warn, debug};
 use qoi::decode_to_vec;
 use turbojpeg::decompress_image;
 
+#[derive(Debug)]
 enum Image {
     Rgb(image::RgbImage),
     Rgba(image::RgbaImage),
+}
+
+impl Image {
+    fn get_size(&self) -> ImageDimensions {
+        match self {
+            Image::Rgb(img) => img.dimensions(),
+            Image::Rgba(img) => img.dimensions(),
+        }
+    }
 }
 
 type BoxedError = Box<dyn std::error::Error>;
@@ -60,6 +70,8 @@ pub fn load_image(path: &Path) -> Result<RawImage2d<'static, u8>, BoxedError> {
     };
 
     info!("image decompressed: {:?}", start.elapsed());
+    debug!("{:?}", image);
+    info!("{:?}", image.get_size());
 
     texture_from_image(image)
 }
