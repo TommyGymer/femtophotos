@@ -213,13 +213,15 @@ fn main() {
         //     std::time::Instant::now() + std::time::Duration::from_nanos(16_666_667);
         // *control_flow = glutin::event_loop::ControlFlow::WaitUntil(next_frame_time);
 
+        *control_flow = glutin::event_loop::ControlFlow::Wait;
+
         if !state.running {
             return;
         }
 
         state.needs_redraw = true;
 
-        let str_ev = format!("{:?}", ev);
+        // let str_ev = format!("{:?}", ev);
 
         // println!("{:?}", ev);
         match ev {
@@ -303,9 +305,9 @@ fn main() {
                 device_id: _,
                 event,
             } => match event {
-                glutin::event::DeviceEvent::MouseWheel { delta } => {
+                glutin::event::DeviceEvent::MouseWheel { .. } => {
                     state.needs_redraw = false;
-                    println!("{:?}", delta);
+                    // println!("{:?}", delta);
                 }
                 glutin::event::DeviceEvent::Button {
                     button,
@@ -406,12 +408,12 @@ fn main() {
                 state.needs_redraw = false;
             }
             _ => {
-                println!("{:?}", ev);
+                // println!("{:?}", ev);
             }
         }
 
         if state.needs_redraw && state.running {
-            println!("{}", str_ev);
+            // println!("{}", str_ev);
 
             if state.image_changed {
                 (texture, image_size) = match load_texture(&display, &state) {
