@@ -1,5 +1,6 @@
 use std::{
-    env, fs,
+    env,
+    fs,
     io::{self, Cursor, ErrorKind},
     path::{Path, PathBuf},
     time::Instant,
@@ -14,7 +15,6 @@ use log::{debug, info, trace, warn};
 use qoi::decode_to_vec;
 use turbojpeg::decompress_image;
 
-#[derive(Debug)]
 enum Image {
     Rgb(image::RgbImage),
     Rgba(image::RgbaImage),
@@ -25,6 +25,15 @@ impl Image {
         match self {
             Image::Rgb(img) => img.dimensions(),
             Image::Rgba(img) => img.dimensions(),
+        }
+    }
+}
+
+impl std::fmt::Display for Image {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            Image::Rgb(img) => write!(f, "RGB({}, {})", img.dimensions().0, img.dimensions().1),
+            Image::Rgba(img) => write!(f, "RGBA({}, {})", img.dimensions().0, img.dimensions().1),
         }
     }
 }
@@ -70,7 +79,7 @@ pub fn load_image(path: &Path) -> Result<RawImage2d<'static, u8>, BoxedError> {
     };
 
     info!("image decompressed: {:?}", start.elapsed());
-    debug!("{:?}", image);
+    debug!("{}", image);
     info!("{:?}", image.get_size());
 
     texture_from_image(image)
