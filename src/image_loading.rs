@@ -1,6 +1,5 @@
 use std::{
-    env,
-    fs,
+    env, fs,
     io::{self, Cursor, ErrorKind},
     path::{Path, PathBuf},
     time::Instant,
