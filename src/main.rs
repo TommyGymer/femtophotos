@@ -209,62 +209,29 @@ fn main() {
     info!("Render loop started");
 
     event_loop.run(move |ev, _, control_flow| {
-        if state.image_changed && state.running {
-            (texture, image_size) = match load_texture(&display, &state) {
-                Ok(res) => res,
-                Err(err) => panic!("{:?}", err),
-            };
-
-            display.gl_window().window().set_title(&format!(
-                "FemtoPhotos: {}",
-                Path::new(&state.image_uri)
-                    .file_name()
-                    .unwrap()
-                    .to_str()
-                    .unwrap()
-            ));
-
-            state.image_changed = false;
-        }
-
-        let uniforms = uniform! {
-            p_rot: state.rotation.to_mat(display.get_framebuffer_dimensions(), image_size),
-            tex: &texture,
-        };
-
-        let mut target = display.draw();
-        target.clear_color(0.2, 0.2, 0.2, 1.0);
-
-        target
-            .draw(
-                &vertex_buffer,
-                indices,
-                &program,
-                &uniforms,
-                &DrawParameters {
-                    blend: Blend::alpha_blending(),
-                    ..Default::default()
-                },
-            )
-            .unwrap();
-
-        target.finish().unwrap();
-
-        // let next_frame_time = std::time::Instant::now() +
-        //     std::time::Duration::from_nanos(16_666_667);
+        // let next_frame_time =
+        //     std::time::Instant::now() + std::time::Duration::from_nanos(16_666_667);
         // *control_flow = glutin::event_loop::ControlFlow::WaitUntil(next_frame_time);
 
         if !state.running {
             return;
         }
 
+        state.needs_redraw = true;
+
+        let str_ev = format!("{:?}", ev);
+
         // println!("{:?}", ev);
         match ev {
+            glutin::event::Event::MainEventsCleared | glutin::event::Event::RedrawEventsCleared => {
+                state.needs_redraw = false;
+            }
             glutin::event::Event::WindowEvent { event, .. } => match event {
                 glutin::event::WindowEvent::CloseRequested => {
                     debug!("Close requested");
                     *control_flow = glutin::event_loop::ControlFlow::Exit;
                     state.running = false;
+                    state.needs_redraw = false;
                 }
                 glutin::event::WindowEvent::ModifiersChanged(mod_state) => {
                     if mod_state.is_empty() {
@@ -272,15 +239,19 @@ fn main() {
                     } else {
                         state.modifiers = Some(mod_state);
                     }
+                    state.needs_redraw = false;
                 }
                 glutin::event::WindowEvent::CursorMoved { position, .. } => {
                     state.mouse_position = Some((position.x as u32, position.y as u32));
+                    state.needs_redraw = false;
                 }
                 glutin::event::WindowEvent::CursorLeft { .. } => {
                     state.mouse_position = None;
+                    state.needs_redraw = false;
                 }
                 glutin::event::WindowEvent::Touch(touch) => match touch.phase {
                     glutin::event::TouchPhase::Started => {
+                        state.needs_redraw = false;
                         state.drag_origin = Some((touch.location.x as u32, touch.location.y as u32))
                     }
                     glutin::event::TouchPhase::Ended => {
@@ -301,22 +272,39 @@ fn main() {
                         }
                     }
                     glutin::event::TouchPhase::Moved => {
+                        state.needs_redraw = false;
                         state.mouse_position =
                             Some((touch.location.x as u32, touch.location.y as u32))
                     }
                     _ => {
+                        state.needs_redraw = false;
                         state.drag_origin = None;
                         state.mouse_position = None;
                     }
                 },
+                glutin::event::WindowEvent::DroppedFile(_)
+                | glutin::event::WindowEvent::HoveredFile(_)
+                | glutin::event::WindowEvent::HoveredFileCancelled
+                | glutin::event::WindowEvent::ReceivedCharacter(_)
+                | glutin::event::WindowEvent::KeyboardInput { .. }
+                | glutin::event::WindowEvent::Ime(_)
+                | glutin::event::WindowEvent::CursorEntered { .. }
+                | glutin::event::WindowEvent::MouseWheel { .. }
+                | glutin::event::WindowEvent::MouseInput { .. }
+                | glutin::event::WindowEvent::TouchpadPressure { .. }
+                | glutin::event::WindowEvent::AxisMotion { .. }
+                | glutin::event::WindowEvent::Occluded(_)
+                | glutin::event::WindowEvent::Moved { .. } => {
+                    state.needs_redraw = false;
+                }
                 _ => (),
-                //_ => println!("{:?}", event),
             },
             glutin::event::Event::DeviceEvent {
                 device_id: _,
                 event,
             } => match event {
                 glutin::event::DeviceEvent::MouseWheel { delta } => {
+                    state.needs_redraw = false;
                     println!("{:?}", delta);
                 }
                 glutin::event::DeviceEvent::Button {
@@ -324,6 +312,7 @@ fn main() {
                     state: button_state,
                 } => match (button, button_state) {
                     (1, ElementState::Pressed) => {
+                        state.needs_redraw = false;
                         state.drag_origin = state.mouse_position;
                     }
                     (1, ElementState::Released) => {
@@ -343,8 +332,9 @@ fn main() {
                             }
                         }
                     }
-                    _ => (),
-                    //_ => println!("{:?}", event),
+                    _ => {
+                        state.needs_redraw = false;
+                    } //_ => println!("{:?}", event),
                 },
                 glutin::event::DeviceEvent::Key(k) => {
                     match (k.virtual_keycode, k.state, state.modifiers) {
@@ -368,6 +358,7 @@ fn main() {
                             state.prev_img();
                         }
                         (Some(VirtualKeyCode::S), ElementState::Released, None) => {
+                            state.needs_redraw = false;
                             let file = FileDialog::new()
                                 .set_directory(Path::new(&state.directory))
                                 .set_file_name(
@@ -394,12 +385,75 @@ fn main() {
                                 save_image(data, size.0, size.1, file.unwrap().as_path());
                             });
                         }
-                        _ => (), //println!("returned {:?}", k),
+                        _ => {
+                            state.needs_redraw = false;
+                        }
                     }
                 }
-                _ => (),
+                _ => {
+                    state.needs_redraw = false;
+                }
             },
-            _ => (),
+            glutin::event::Event::NewEvents(cause) => {
+                // println!("{:?}", cause);
+                if cause == glutin::event::StartCause::Poll {
+                    state.needs_redraw = false;
+                }
+            }
+            glutin::event::Event::Suspended
+            | glutin::event::Event::Resumed
+            | glutin::event::Event::LoopDestroyed => {
+                state.needs_redraw = false;
+            }
+            _ => {
+                println!("{:?}", ev);
+            }
+        }
+
+        if state.needs_redraw && state.running {
+            println!("{}", str_ev);
+
+            if state.image_changed {
+                (texture, image_size) = match load_texture(&display, &state) {
+                    Ok(res) => res,
+                    Err(err) => panic!("{:?}", err),
+                };
+
+                display.gl_window().window().set_title(&format!(
+                    "FemtoPhotos: {}",
+                    Path::new(&state.image_uri)
+                        .file_name()
+                        .unwrap()
+                        .to_str()
+                        .unwrap()
+                ));
+
+                state.image_changed = false;
+            }
+
+            let uniforms = uniform! {
+                p_rot: state.rotation.to_mat(display.get_framebuffer_dimensions(), image_size),
+                tex: &texture,
+            };
+
+            let mut target = display.draw();
+            target.clear_color(0.2, 0.2, 0.2, 1.0);
+
+            target
+                .draw(
+                    &vertex_buffer,
+                    indices,
+                    &program,
+                    &uniforms,
+                    &DrawParameters {
+                        blend: Blend::alpha_blending(),
+                        ..Default::default()
+                    },
+                )
+                .unwrap();
+
+            target.finish().unwrap();
+            state.needs_redraw = false;
         }
     });
 }
