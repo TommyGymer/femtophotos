@@ -18,6 +18,7 @@ pub struct State {
     pub mouse_position: Option<(u32, u32)>,
     pub drag_origin: Option<(u32, u32)>,
     pub running: bool,
+    pub needs_redraw: bool,
 }
 
 impl State {
@@ -31,6 +32,7 @@ impl State {
             mouse_position: None,
             drag_origin: None,
             running: true,
+            needs_redraw: true,
         }
     }
 
@@ -68,6 +70,7 @@ impl State {
         };
 
         self.image_changed = true;
+        self.needs_redraw = true;
     }
 
     fn open_img<I: Iterator<Item = DirEntry>>(&mut self, mut i: I) {
