@@ -215,17 +215,27 @@ fn texture_from_image(img: Image) -> Result<RawImage2d<'static, u8>, BoxedError>
     match img {
         Image::Rgb(img) => {
             let image_dimensions = img.dimensions();
-            Ok(glium::texture::RawImage2d::from_raw_rgb(
-                img.into_raw(),
+            info!("image dimensions: {:?}", image_dimensions);
+            let buffer = img.into_raw();
+            info!("image buffer generated");
+            let r = Ok(glium::texture::RawImage2d::from_raw_rgb(
+                buffer,
                 image_dimensions,
-            ))
+            ));
+            info!("image acquired");
+            r
         }
         Image::Rgba(img) => {
             let image_dimensions = img.dimensions();
-            Ok(glium::texture::RawImage2d::from_raw_rgba(
-                img.into_raw(),
+            info!("image dimensions: {:?}", image_dimensions);
+            let buffer = img.into_raw();
+            info!("image buffer generated");
+            let r = Ok(glium::texture::RawImage2d::from_raw_rgba(
+                buffer,
                 image_dimensions,
-            ))
+            ));
+            info!("image acquired");
+            r
         }
     }
 }

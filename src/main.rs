@@ -37,12 +37,15 @@ fn load_texture(
     display: &Display,
     state: &State,
 ) -> Result<(SrgbTexture2d, (u32, u32)), Box<dyn std::error::Error>> {
-    // let start = Instant::now();
+    info!("loading texture");
     let image = image_loading::load_image(Path::new(&state.image_uri))?;
+    debug!("got image");
     let image_size = (image.width, image.height);
+    debug!("got image size");
     // println!("image loaded: {:?}", start.elapsed());
     let texture = glium::texture::SrgbTexture2d::new(display, image)?;
     // println!("texture loaded: {:?}", start.elapsed());
+    info!("texture loaded");
     Ok((texture, image_size))
 }
 
@@ -172,7 +175,20 @@ fn main() {
 
     let mut state = State::default();
     if args.len() > 1 {
-        state.image_uri = args.get(1).unwrap().to_str().unwrap().to_string();
+        state.image_uri = match args.get(1) {
+            None => {
+                info!("invalid argument");
+                "".to_string()
+            }
+            Some(arg) => match arg.to_str() {
+                None => {
+                    info!("arguments was not string");
+                    "".to_string()
+                }
+                Some(path) => path.to_string()
+            }
+        };
+            args.get(1).unwrap().to_str().unwrap().to_string();
         state.directory = Path::new(&state.image_uri)
             .parent()
             .unwrap()
@@ -183,13 +199,13 @@ fn main() {
     state.load_img();
 
     let mut texture: SrgbTexture2d;
-    let mut image_size: (u32, u32);
+    let mut image_size: (u32, u32) = (0, 0);
 
     (texture, image_size) = match load_texture(&display, &state) {
         Ok(res) => res,
         Err(err) => {
-            info!("{:?}", err);
-            panic!("{:?}", err);
+            info!("line 191: {:?}", err);
+            panic!("line 192: {:?}", err);
         }
     };
 
@@ -216,6 +232,7 @@ fn main() {
         *control_flow = glutin::event_loop::ControlFlow::Wait;
 
         if !state.running {
+            info!("state was not running");
             return;
         }
 
